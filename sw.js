@@ -8,6 +8,8 @@ self.addEventListener('activate', e => {
 });
 // Network-first for navigation (so app updates arrive), cache fallback when offline
 self.addEventListener('fetch', e => {
+  // never intercept API calls or non-GET requests (cloud sync goes straight to network)
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     fetch(e.request).then(r => {
       const copy = r.clone();

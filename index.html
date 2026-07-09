@@ -226,6 +226,10 @@
       <div id="histWeeks"></div>
     </div>
     <div class="card">
+      <h2>Day-by-day log</h2>
+      <div id="dayLog" class="hint">No days logged yet.</div>
+    </div>
+    <div class="card">
       <h2>Review log</h2>
       <div id="reviewLog" class="hint">No weekly reviews saved yet.</div>
     </div>
@@ -312,6 +316,17 @@
 
   <!-- ============ DATA ============ -->
   <section class="tab" id="tab-data">
+    <div class="card">
+      <h2>Cloud backup — GitHub sync</h2>
+      <p class="hint">Every "Log today" is committed to your private <code>engine-data</code> repo. Your phone stays the fast offline copy; the cloud holds the permanent record with full history. Paste a fine-grained token (scoped ONLY to engine-data, Contents read/write) once per device.</p>
+      <div class="btnrow" style="align-items:center">
+        <input type="password" id="ghToken" placeholder="github_pat_… (engine-data only)" style="flex:1; min-width:200px; font:12px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <button class="btn" onclick="saveToken()">Save token</button>
+        <button class="btn primary" onclick="syncNow()">Sync now</button>
+      </div>
+      <div class="note" id="syncStatus">Sync not configured on this device yet.</div>
+    </div>
+
     <div class="card">
       <h2>Your data</h2>
       <p class="hint">Everything saves automatically in this browser — close the tab, come back tomorrow, it's all here. Data lives on this device only: use Export/Import to back it up or move it to another device (e.g. phone → laptop). Clearing browser data wipes it, so export occasionally.</p>
@@ -482,7 +497,7 @@ function renderHistory(){
   const el = document.getElementById('histChart');
   if(!el) return;
   const days = state.history.slice(-30);
-  if(!days.length){ el.innerHTML = '<p class="hint">Nothing logged yet — your first bar appears tonight.</p>'; document.getElementById('histWeeks').innerHTML=''; renderReviews(); return; }
+  if(!days.length){ el.innerHTML = '<p class="hint">Nothing logged yet — your first bar appears tonight.</p>'; document.getElementById('histWeeks').innerHTML=''; renderDayLog(); renderReviews(); return; }
   const W = 900, H = 190, PB = 26, PT = 14, max = Math.max(135, ...days.map(d=>d.pts));
   const bw = Math.min(24, Math.floor(W/days.length) - 4);
   const step = W/days.length;
@@ -505,7 +520,19 @@ function renderHistory(){
   const weeks = Object.keys(byWk).sort().slice(-8);
   document.getElementById('histWeeks').innerHTML = '<table><tr><th>Week</th><th style="text-align:right">Points</th><th>Rank</th></tr>' +
     weeks.map(w=>`<tr><td>${w}</td><td style="text-align:right; font-variant-numeric:tabular-nums">${byWk[w]}</td><td>${rank(byWk[w])}</td></tr>`).join('') + '</table>';
+  renderDayLog();
   renderReviews();
+}
+function renderDayLog(){
+  const el = document.getElementById('dayLog');
+  if(!el) return;
+  if(!state.history.length){ el.textContent = 'No days logged yet.'; return; }
+  const names = {}; SESSIONS.forEach(s=>names[s.id]=s.t);
+  const rows = state.history.slice().reverse().map(e=>{
+    const sess = (e.sessions||[]).map(id=>names[id]||id).join(', ') || '—';
+    return `<tr><td style="white-space:nowrap">${e.date}</td><td style="text-align:right; font-variant-numeric:tabular-nums; font-weight:600">${e.pts}</td><td>${e.mvd?'✓':'✗'}</td><td style="font-size:12px; color:var(--ink2)">${sess}</td></tr>`;
+  }).join('');
+  el.innerHTML = `<table><tr><th>Date</th><th style="text-align:right">Points</th><th>MVD</th><th>Sessions</th></tr>${rows}</table>`;
 }
 function renderReviews(){
   const el = document.getElementById('reviewLog');
@@ -561,6 +588,7 @@ function logDay(){
   const w = weekStats();
   if(w.pts>state.prWeek) state.prWeek = w.pts;
   renderChallenge();
+  if(ghToken() && navigator.onLine) syncNow();
   const summary = `${entry.date} — ${entry.pts} pts · MVD ${entry.mvd?'✓':'✗'} · ${entry.sessions.join(', ')||'no sessions'} · streak ${streak()}`;
   navigator.clipboard && navigator.clipboard.writeText(summary).catch(()=>{});
   document.getElementById('closeNote').innerHTML = `<span class="flag">Logged.</span> Copied: <code>${summary}</code> — paste it to Claude or your notes. ${entry.mvd?'Streak extended. ':''}Now export your data (Data tab) or paste the summary somewhere safe.`;
@@ -601,6 +629,64 @@ function importData(){
     document.getElementById('dataNote').textContent = 'Imported '+state.history.length+' day(s). Streak: '+streak()+'.';
     refresh();
   }catch(e){ document.getElementById('dataNote').textContent = 'Import failed — not valid exported JSON.'; }
+}
+
+// ---------- cloud sync (private GitHub repo as database) ----------
+const SYNC = { owner:'Xenien', repo:'engine-data', path:'history.json', key:'adamos-gh' };
+function ghToken(){ try{ return localStorage.getItem(SYNC.key)||''; }catch(e){ return ''; } }
+function saveToken(){
+  const t = document.getElementById('ghToken').value.trim();
+  if(!t){ setSync('No token entered.'); return; }
+  try{ localStorage.setItem(SYNC.key, t); }catch(e){}
+  document.getElementById('ghToken').value='';
+  setSync('Token saved on this device. Syncing…');
+  syncNow();
+}
+function setSync(msg){ const el=document.getElementById('syncStatus'); if(el) el.textContent = msg; }
+function ghUrl(){ return `https://api.github.com/repos/${SYNC.owner}/${SYNC.repo}/contents/${SYNC.path}`; }
+function ghHeaders(){ return { 'Authorization':'Bearer '+ghToken(), 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' }; }
+
+function mergeStates(remote){
+  if(!remote || !Array.isArray(remote.history)) return;
+  const byDate = {};
+  remote.history.forEach(e=>{ byDate[e.date]=e; });
+  state.history.forEach(e=>{ if(!byDate[e.date] || e.pts >= byDate[e.date].pts) byDate[e.date]=e; });
+  state.history = Object.values(byDate).sort((a,b)=>a.date<b.date?-1:1);
+  state.prWeek = Math.max(state.prWeek||0, remote.prWeek||0);
+  state.reviews = Object.assign({}, remote.reviews||{}, state.reviews||{});
+  state.challenge = Object.assign({}, remote.challenge||{}, state.challenge||{});
+}
+
+async function syncPull(){
+  const r = await fetch(ghUrl(), { headers: Object.assign({'Accept':'application/vnd.github.raw+json'}, {'Authorization':'Bearer '+ghToken(),'X-GitHub-Api-Version':'2022-11-28'}), cache:'no-store' });
+  if(r.status===404) return 'empty';
+  if(!r.ok) throw new Error('pull '+r.status);
+  mergeStates(await r.json());
+  save();
+  return 'ok';
+}
+async function syncPush(){
+  let sha;
+  const g = await fetch(ghUrl(), { headers: ghHeaders(), cache:'no-store' });
+  if(g.ok) sha = (await g.json()).sha;
+  else if(g.status!==404) throw new Error('read '+g.status);
+  const body = { message:'sync '+dateStr(), content: btoa(unescape(encodeURIComponent(JSON.stringify(state,null,1)))) };
+  if(sha) body.sha = sha;
+  const p = await fetch(ghUrl(), { method:'PUT', headers: ghHeaders(), body: JSON.stringify(body) });
+  if(!p.ok) throw new Error('push '+p.status);
+}
+async function syncNow(){
+  if(!ghToken()){ setSync('No token saved on this device yet — paste one above.'); return; }
+  if(!navigator.onLine){ setSync('Offline — will keep data locally; sync when back online.'); return; }
+  try{
+    setSync('Syncing…');
+    await syncPull();
+    await syncPush();
+    setSync('Synced ✓ '+new Date().toLocaleTimeString()+' — cloud backup is current (repo: '+SYNC.repo+').');
+    refresh();
+  }catch(e){
+    setSync('Sync failed ('+e.message+'). Data is safe locally; check the token has Contents read/write on '+SYNC.repo+'.');
+  }
 }
 
 // ---------- tabs & init ----------
@@ -661,6 +747,10 @@ renderChallenge();
 refresh();
 // offline support
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+// pull cloud backup on open (non-blocking)
+if(ghToken() && navigator.onLine){ syncPull().then(()=>{ refresh(); setSync('Synced ✓ pulled latest from cloud on open.'); }).catch(()=>{ setSync('Could not reach cloud on open — using local copy.'); }); }
+else if(ghToken()){ setSync('Offline — using local copy; will sync when online.'); }
+window.addEventListener('online', ()=>{ if(ghToken()) syncNow(); });
 </script>
 </body>
 </html>
