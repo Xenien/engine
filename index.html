@@ -456,7 +456,21 @@ function weekStats(){
 function rank(p){ return p>=700?'Gold':p>=550?'Silver':p>=400?'Bronze':'—'; }
 function dateStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
+let reconstructed = false;
+function reconstructToday(){
+  // If this device/app-container has no checkbox state for today but a logged entry
+  // exists (from another device, Safari vs home-screen app, or the cloud), rebuild it.
+  if(reconstructed) return;
+  const anyChecked = Object.keys(today).some(k=>today[k]);
+  if(anyChecked){ reconstructed = true; return; }
+  const e = state.history.find(x=>x.date===dateStr());
+  if(!e) return;
+  (e.mvds || (e.mvd ? MVD.map(i=>i.id) : [])).forEach(id=>{ today[id]=true; });
+  (e.sessions||[]).forEach(id=>{ today[id]=true; });
+  reconstructed = true;
+}
 function refresh(){
+  reconstructToday();
   renderChecks();
   document.getElementById('ptsToday').textContent = ptsToday();
   document.getElementById('mvdStatus').textContent = mvdCount()+'/3';
@@ -579,6 +593,7 @@ function logDay(){
     date: dateStr(),
     pts: ptsToday(),
     mvd: mvdDone(),
+    mvds: MVD.filter(i=>today[i.id]).map(i=>i.id),
     sessions: SESSIONS.filter(s=>today[s.id]).map(s=>s.id),
   };
   // replace same-date entry if re-logged
@@ -702,11 +717,13 @@ document.getElementById('todayline').textContent =
   new Date().toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'long', year:'numeric'}) +
   ' · Built for high-openness, high-extraversion, low-guilt operation';
 // ---------- July challenge grid ----------
-function challengeDone(dstr){
-  if(state.challenge && state.challenge[dstr] !== undefined) return state.challenge[dstr];
+function challengeHistDone(dstr){
   const e = state.history.find(x=>x.date===dstr);
-  if(!e) return false;
-  return e.mvd || (e.sessions||[]).includes('esp1');
+  return !!(e && (e.mvd || (e.sessions||[]).includes('esp1') || (e.mvds||[]).includes('mvd_esp')));
+}
+function challengeDone(dstr){
+  // history is the source of truth and can only ADD green; manual override can only add too
+  return challengeHistDone(dstr) || (state.challenge && state.challenge[dstr] === true);
 }
 function renderChallenge(){
   const g = document.getElementById('challengeGrid');
@@ -714,20 +731,24 @@ function renderChallenge(){
   g.innerHTML = '';
   const todayD = dateStr();
   const start = new Date('2026-07-06T12:00:00');
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   for(let d=1; d<=30; d++){
     const dt = new Date(start.getTime() + (d-1)*86400000);
     const dstr = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+    const greg = MONTHS[dt.getMonth()]+' '+dt.getDate();
     const done = challengeDone(dstr);
     const future = dstr > todayD;
+    const entry = state.history.find(x=>x.date===dstr);
     const cell = document.createElement('div');
-    cell.style.cssText = 'aspect-ratio:1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; cursor:pointer; border:1px solid var(--border);' +
+    cell.style.cssText = 'aspect-ratio:1; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:12px; font-weight:700; cursor:pointer; border:1px solid var(--border); line-height:1.15;' +
       (done ? 'background:var(--esp); color:#fff;' : future ? 'background:var(--page); color:var(--muted);' : 'background:var(--esp-track); color:var(--ink2);');
-    cell.textContent = d;
-    cell.title = 'Day '+d+' · '+dstr + (done ? ' — done' : future ? '' : ' — tap to mark done');
+    cell.innerHTML = d + '<span style="font-size:8.5px; font-weight:600; opacity:.75">'+greg+'</span>';
+    cell.title = 'Day '+d+' · '+dstr + (entry ? ' — '+entry.pts+' / 135 pts' : '') + (done ? ' · Spanish done' : future ? '' : ' · tap to mark done');
     cell.addEventListener('click', ()=>{
       if(future) return;
+      if(challengeHistDone(dstr)) return; // logged days are truth — can't be un-tapped by accident
       state.challenge = state.challenge || {};
-      state.challenge[dstr] = !challengeDone(dstr);
+      state.challenge[dstr] = !(state.challenge[dstr] === true);
       save(); renderChallenge();
     });
     g.appendChild(cell);
