@@ -336,8 +336,8 @@
     </div>
 
     <div class="card">
-      <h2>Your data</h2>
-      <p class="hint">Everything saves automatically in this browser — close the tab, come back tomorrow, it's all here. Data lives on this device only: use Export/Import to back it up or move it to another device (e.g. phone → laptop). Clearing browser data wipes it, so export occasionally.</p>
+      <h2>Your data (manual fallback)</h2>
+      <p class="hint">With cloud sync active above, this section is just the escape hatch — the cloud is the real backup. Export/Import remains useful for a one-off copy or if GitHub is ever unreachable. Clearing browser data on this device loses nothing as long as sync is configured.</p>
       <h3>Export</h3>
       <div class="btnrow">
         <button class="btn primary" onclick="exportData()">Copy JSON to clipboard</button>
@@ -720,7 +720,12 @@ async function syncPull(){
   if(r.status===404) return 'empty';
   if(!r.ok) throw new Error('pull '+r.status);
   mergeStates(await r.json());
+  // invalidate cached day buffers so newly synced history shows everywhere
+  Object.keys(buffers).forEach(d=>{ if(d!==dateStr()) delete buffers[d]; });
+  reconstructed = false;
+  if(viewDate && !viewingToday()) today = bufferFor(viewDate);
   save();
+  renderChallenge();
   return 'ok';
 }
 async function syncPush(){
