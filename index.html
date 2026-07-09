@@ -115,6 +115,14 @@
 
   <!-- ============ TODAY ============ -->
   <section class="tab active" id="tab-today">
+    <div class="card" style="padding:10px 14px; display:flex; align-items:center; gap:10px">
+      <button class="btn" onclick="navDay(-1)" title="Previous day">‹</button>
+      <div style="flex:1; text-align:center">
+        <div style="font-weight:700; font-size:14.5px" id="viewDateLabel">—</div>
+        <div class="hint" id="viewDateHint" style="display:none; cursor:pointer; text-decoration:underline" onclick="setViewDate(dateStr())">jump back to today</div>
+      </div>
+      <button class="btn" onclick="navDay(1)" title="Next day" id="navFwd">›</button>
+    </div>
     <div class="tiles">
       <div class="tile hero"><div class="label">Points today</div><div class="value" id="ptsToday">0</div><div class="delta" id="ptsMax">of 135 possible</div></div>
       <div class="tile"><div class="label">MVD status</div><div class="value" id="mvdStatus">0/3</div><div class="delta">the floor — never below this</div></div>
@@ -381,10 +389,12 @@ const WK_TARGETS = [
 
 // ---------- state (auto-persisted to this browser) ----------
 let state = { history:[], prWeek:0, lastWeekPts:0, reviews:{} };
-let today = {};
+const buffers = {};           // per-date checkbox buffers
+let viewDate = null;          // set after dateStr() is defined
+let today = {};               // alias: buffers[viewDate]
 const STORE = 'adamos-v1';
 function save(){
-  try{ localStorage.setItem(STORE, JSON.stringify({state, today, todayDate: dateStr()})); }catch(e){}
+  try{ localStorage.setItem(STORE, JSON.stringify({state, today: buffers[dateStr()]||{}, todayDate: dateStr()})); }catch(e){}
 }
 function load(){
   try{
@@ -393,9 +403,34 @@ function load(){
     const j = JSON.parse(raw);
     state = Object.assign({history:[],prWeek:0,lastWeekPts:0,reviews:{}}, j.state||{});
     // restore today's checkboxes only if it's still the same calendar day
-    today = (j.todayDate === dateStr()) ? (j.today||{}) : {};
+    buffers[dateStr()] = (j.todayDate === dateStr()) ? (j.today||{}) : {};
+    today = buffers[dateStr()];
   }catch(e){}
 }
+function bufferFor(d){
+  if(!buffers[d]){
+    buffers[d] = {};
+    const e = state.history.find(x=>x.date===d);
+    if(e){
+      (e.mvds || (e.mvd ? MVD.map(i=>i.id) : [])).forEach(id=>{ buffers[d][id]=true; });
+      (e.sessions||[]).forEach(id=>{ buffers[d][id]=true; });
+    }
+  }
+  return buffers[d];
+}
+function setViewDate(d){
+  if(d > dateStr()) return;
+  viewDate = d;
+  today = bufferFor(d);
+  refresh();
+}
+function navDay(delta){
+  const dt = new Date(viewDate+'T12:00:00');
+  dt.setDate(dt.getDate()+delta);
+  const nd = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  setViewDate(nd);
+}
+function viewingToday(){ return viewDate === dateStr(); }
 
 // ---------- render checklists ----------
 function renderChecks(){
@@ -419,9 +454,9 @@ function ptsToday(){
   let p = 0;
   MVD.forEach(i=>{ if(today[i.id]) p+=i.pts; });
   SESSIONS.forEach(i=>{ if(today[i.id]) p+=i.pts; });
-  // comeback bonus: last logged day missed MVD & the day before that was logged with MVD? simple: if last entry exists and its mvd=false
-  const h = state.history;
-  if(h.length && !h[h.length-1].mvd && mvdDone()) p += 15;
+  // comeback bonus: the most recent logged day BEFORE the viewed day missed its MVD
+  const prev = state.history.filter(e=>e.date<viewDate).pop();
+  if(prev && !prev.mvd && mvdDone()) p += 15;
   return p;
 }
 function mvdDone(){ return MVD.every(i=>today[i.id]); }
@@ -460,7 +495,7 @@ let reconstructed = false;
 function reconstructToday(){
   // If this device/app-container has no checkbox state for today but a logged entry
   // exists (from another device, Safari vs home-screen app, or the cloud), rebuild it.
-  if(reconstructed) return;
+  if(reconstructed || !viewingToday()) return;
   const anyChecked = Object.keys(today).some(k=>today[k]);
   if(anyChecked){ reconstructed = true; return; }
   const e = state.history.find(x=>x.date===dateStr());
@@ -472,14 +507,22 @@ function reconstructToday(){
 function refresh(){
   reconstructToday();
   renderChecks();
+  // day navigator
+  const vd = new Date(viewDate+'T12:00:00');
+  document.getElementById('viewDateLabel').textContent =
+    vd.toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + (viewingToday() ? ' — Today' : ' — past day');
+  document.getElementById('viewDateHint').style.display = viewingToday() ? 'none' : 'block';
+  document.getElementById('navFwd').style.visibility = viewingToday() ? 'hidden' : 'visible';
+  const logBtn = document.querySelector('#tab-today .btnrow .btn.primary');
+  if(logBtn) logBtn.textContent = viewingToday() ? 'Log today & copy summary' : 'Update this day';
   document.getElementById('ptsToday').textContent = ptsToday();
   document.getElementById('mvdStatus').textContent = mvdCount()+'/3';
   const loggedToday = state.history.some(e=>e.date===dateStr());
-  document.getElementById('streakVal').textContent = loggedToday ? streak() : streak() + (mvdDone()?'+1':'');
-  document.getElementById('streakNote').textContent = loggedToday ? 'today is banked' : (mvdDone() ? 'today counts once logged' : 'finish the MVD to extend it');
+  document.getElementById('streakVal').textContent = loggedToday ? streak() : streak() + ((viewingToday()&&mvdDone())?'+1':'');
+  document.getElementById('streakNote').textContent = loggedToday ? 'today is banked' : (viewingToday()&&mvdDone() ? 'today counts once logged' : 'finish the MVD to extend it');
   // week
   const w = weekStats();
-  const livePts = w.ptsExclToday + ptsToday();
+  const livePts = viewingToday() ? (w.ptsExclToday + ptsToday()) : w.pts;
   document.getElementById('wkPts').textContent = livePts;
   const dEl = document.getElementById('wkDelta');
   if(w.prevPts>0){
@@ -493,7 +536,7 @@ function refresh(){
   // bars
   const bars = document.getElementById('wkBars'); bars.innerHTML='';
   WK_TARGETS.forEach(t=>{
-    const liveAdd = SESSIONS.filter(s=>s.key===t.key && today[s.id]).length;
+    const liveAdd = viewingToday() ? SESSIONS.filter(s=>s.key===t.key && today[s.id]).length : 0;
     const v = w.counts[t.key] + liveAdd;
     const pct = Math.min(100, Math.round(v/t.target*100));
     const row = document.createElement('div'); row.className='bar-row';
@@ -590,7 +633,7 @@ function cancelReview(){ document.getElementById('reviewBox').style.display='non
 
 function logDay(){
   const entry = {
-    date: dateStr(),
+    date: viewDate,
     pts: ptsToday(),
     mvd: mvdDone(),
     mvds: MVD.filter(i=>today[i.id]).map(i=>i.id),
@@ -609,7 +652,7 @@ function logDay(){
   document.getElementById('closeNote').innerHTML = `<span class="flag">Logged.</span> Copied: <code>${summary}</code> — paste it to Claude or your notes. ${entry.mvd?'Streak extended. ':''}Now export your data (Data tab) or paste the summary somewhere safe.`;
   refresh();
 }
-function resetToday(){ today={}; refresh(); }
+function resetToday(){ buffers[viewDate]={}; today=buffers[viewDate]; refresh(); }
 
 // ---------- foundations grid ----------
 function renderFoundations(){
@@ -763,6 +806,8 @@ function renderChallenge(){
   if(el) el.textContent = left;
 })();
 load();
+viewDate = dateStr();
+today = bufferFor(viewDate);
 renderFoundations();
 renderChallenge();
 refresh();
