@@ -17,6 +17,7 @@
     --esp:#1baf7a; --esp-track:#c9f0e2;
     --fnd:#eda100; --fnd-track:#fbe8bd;
     --wld:#008300; --wld-track:#cdeacd;
+    --soc:#4a3aa7; --soc-track:#ddd9f4;
     --good:#0ca30c; --warn:#fab219; --goodtext:#006300;
   }
   @media (prefers-color-scheme: dark){
@@ -27,6 +28,7 @@
       --esp:#199e70; --esp-track:#123a2c;
       --fnd:#c98500; --fnd-track:#3d2f0e;
       --wld:#008300; --wld-track:#123512;
+      --soc:#9085e9; --soc-track:#2a2650;
       --good:#0ca30c; --goodtext:#0ca30c;
     }
   }
@@ -96,6 +98,7 @@
   .rz-t{top:-3px} .rz-b{bottom:-3px}
   .calfree{position:absolute; left:34px; right:4px; border:1.5px dashed var(--baseline); border-radius:7px; font-size:10px; color:var(--muted); padding:1px 8px}
   .nowline{position:absolute; left:0; right:0; border-top:2px solid var(--esp); z-index:4}
+  .salahline{position:absolute; left:0; right:0; border-top:1px dotted var(--fnd); font-size:9px; color:var(--fnd); text-align:right; padding-right:2px; pointer-events:none; z-index:3}
   /* playbook */
   .rule{padding:10px 0; border-bottom:1px solid var(--grid)}
   .rule:last-child{border:none}
@@ -189,12 +192,31 @@
     </div>
 
     <div class="card">
+      <h2>Capture — ideas exit your head here</h2>
+      <p class="hint">Any idea, any hour. Dump it, return to what you were doing. Captured ideas get their audition at Saturday's wildcard block and the Sunday review — never mid-week, never mid-spurt.</p>
+      <div class="btnrow" style="align-items:center">
+        <input id="capText" placeholder="The idea…" style="flex:1; min-width:180px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <button class="btn primary" onclick="addCapture()">Capture</button>
+      </div>
+      <div id="capList" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
       <h2>Close the day</h2>
       <div class="btnrow">
         <button class="btn primary" onclick="logDay()">Log today &amp; copy summary</button>
         <button class="btn" onclick="resetToday()">Reset checkboxes</button>
       </div>
       <div class="note" id="closeNote">Hit "Log today" at 21:45. It banks your points into the week, extends the streak if the MVD is done, and copies a one-line summary you can paste to Claude or your notes.</div>
+    </div>
+
+    <div class="card" id="debrief">
+      <h2>Daily debrief — 60 seconds, feeds tomorrow's build</h2>
+      <p class="hint">Claude reads these. What you write here becomes the next iteration of this OS.</p>
+      <textarea id="fbUse" placeholder="How did you actually use the OS today?" style="min-height:56px"></textarea>
+      <textarea id="fbQol" placeholder="What annoyed you / what QoL improvement do you want?" style="min-height:56px; margin-top:6px"></textarea>
+      <div class="btnrow"><button class="btn primary" onclick="saveDebrief()">Save debrief</button></div>
+      <div class="hint" id="fbNote" style="margin-top:6px"></div>
     </div>
   </section>
 
@@ -322,6 +344,11 @@
     <div class="card">
       <h2>Weekly totals</h2>
       <div id="histWeeks"></div>
+    </div>
+    <div class="card">
+      <h2>Points by pillar — last 4 weeks</h2>
+      <p class="hint">Which pillar is starving? Approximate split from your logged sessions (base values).</p>
+      <div id="pillarChart" style="margin-top:10px"></div>
     </div>
     <div class="card">
       <h2>Day-by-day log</h2>
@@ -655,7 +682,7 @@ function refresh(){
     vd.toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + (viewingToday() ? ' — Today' : ' — past day');
   document.getElementById('viewDateHint').style.display = viewingToday() ? 'none' : 'block';
   document.getElementById('navFwd').style.visibility = viewingToday() ? 'hidden' : 'visible';
-  const logBtn = document.querySelector('#tab-today .btnrow .btn.primary');
+  const logBtn = document.querySelector('button[onclick="logDay()"]');
   if(logBtn) logBtn.textContent = viewingToday() ? 'Log today & copy summary' : 'Update this day';
   const earned = ptsToday();
   document.getElementById('ptsToday').textContent = earned;
@@ -728,6 +755,7 @@ function renderHistory(){
   document.getElementById('histWeeks').innerHTML = '<table><tr><th>Week</th><th style="text-align:right">Points</th><th>Rank</th></tr>' +
     weeks.map(w=>`<tr><td>${w}</td><td style="text-align:right; font-variant-numeric:tabular-nums">${byWk[w]}</td><td>${rank(byWk[w])}</td></tr>`).join('') + '</table>';
   renderDayLog();
+  renderPillars();
   renderReviews();
 }
 function renderDayLog(){
@@ -762,7 +790,13 @@ const RV_QS = [
 ];
 let rvStep = -1, rvAnswers = {};
 function startReview(){ rvStep = 0; rvAnswers = {}; document.getElementById('reviewBox').style.display='block'; showReview(); }
-function showReview(){ document.getElementById('rvQ').textContent = RV_QS[rvStep][1]; document.getElementById('rvA').value = ''; }
+function showReview(){
+  let q = RV_QS[rvStep][1];
+  if(RV_QS[rvStep][0]==='wildcard' && (state.capture||[]).length)
+    q += ' YOUR CAPTURE LIST awaits its audition: ' + state.capture.map(c=>c.text).join(' · ');
+  document.getElementById('rvQ').textContent = q;
+  document.getElementById('rvA').value = '';
+}
 function nextReview(){
   rvAnswers[RV_QS[rvStep][0]] = document.getElementById('rvA').value.trim();
   rvStep++;
@@ -866,6 +900,10 @@ function mergeStates(remote){
   if((!state.trips || !state.trips.length) && remote.trips) state.trips = remote.trips;
   state.blocks = Object.assign({}, remote.blocks||{}, state.blocks||{});
   if((!state.tasks || !state.tasks.length) && remote.tasks) state.tasks = remote.tasks;
+  // capture: union, dedupe by text+date
+  const seen = new Set((state.capture||[]).map(c=>c.date+'|'+c.text));
+  (remote.capture||[]).forEach(c=>{ if(!seen.has(c.date+'|'+c.text)){ state.capture=state.capture||[]; state.capture.push(c); } });
+  state.feedback = Object.assign({}, remote.feedback||{}, state.feedback||{});
 }
 
 async function syncPull(){
@@ -1005,6 +1043,143 @@ function addTrip(){
 }
 function delTrip(i){ state.trips.splice(i,1); save(); renderTrips(); }
 
+// ---------- capture inbox ----------
+function addCapture(){
+  const t = document.getElementById('capText').value.trim();
+  if(!t) return;
+  state.capture = state.capture || [];
+  state.capture.push({text:t, date:dateStr()});
+  document.getElementById('capText').value='';
+  save(); renderCapture();
+  if(ghToken() && navigator.onLine) syncNow();
+}
+function renderCapture(){
+  const el = document.getElementById('capList');
+  if(!el) return;
+  state.capture = state.capture || [];
+  el.innerHTML = state.capture.length ? state.capture.map((c,i)=>
+    `<div class="rule" style="display:flex; gap:8px; align-items:baseline"><span style="color:var(--muted); font-size:11px; white-space:nowrap">${c.date.slice(5)}</span><span style="flex:1">${c.text}</span><span style="cursor:pointer; color:var(--muted)" onclick="delCapture(${i})">✕</span></div>`).join('')
+    : '<p class="hint">Empty head, full list — that\'s the goal.</p>';
+}
+function delCapture(i){ state.capture.splice(i,1); save(); renderCapture(); }
+
+// ---------- daily debrief ----------
+function saveDebrief(){
+  const use = document.getElementById('fbUse').value.trim();
+  const qol = document.getElementById('fbQol').value.trim();
+  if(!use && !qol) return;
+  state.feedback = state.feedback || {};
+  state.feedback[dateStr()] = {use, qol, at: new Date().toISOString()};
+  document.getElementById('fbNote').textContent = 'Saved & syncing — this feeds tomorrow\'s iteration.';
+  save();
+  if(ghToken() && navigator.onLine) syncNow();
+}
+function loadDebrief(){
+  const f = (state.feedback||{})[dateStr()];
+  if(f){ document.getElementById('fbUse').value = f.use||''; document.getElementById('fbQol').value = f.qol||''; }
+}
+
+// ---------- prayer time anchors (approximate, offline) ----------
+const TZ_COORDS = {
+  'Asia/Kuala_Lumpur':[3.14,101.69],'Asia/Dubai':[25.20,55.27],'Asia/Riyadh':[24.71,46.68],
+  'Asia/Shanghai':[31.23,121.47],'Asia/Singapore':[1.35,103.82],'Europe/Vienna':[48.21,16.37],
+  'Asia/Qatar':[25.29,51.53],'Asia/Bahrain':[26.23,50.59],'Asia/Kuwait':[29.38,47.99],'Asia/Jakarta':[-6.21,106.85]
+};
+const RAD = Math.PI/180;
+function fixAngle(a,m){ a = a - m*Math.floor(a/m); return a<0 ? a+m : a; }
+function sunPos(jd){
+  const D = jd - 2451545.0;
+  const g = fixAngle(357.529 + 0.98560028*D, 360);
+  const q = fixAngle(280.459 + 0.98564736*D, 360);
+  const L = fixAngle(q + 1.915*Math.sin(g*RAD) + 0.020*Math.sin(2*g*RAD), 360);
+  const e = 23.439 - 0.00000036*D;
+  const RA = Math.atan2(Math.cos(e*RAD)*Math.sin(L*RAD), Math.cos(L*RAD))/RAD/15;
+  return { decl: Math.asin(Math.sin(e*RAD)*Math.sin(L*RAD))/RAD, eqt: q/15 - fixAngle(RA,24) };
+}
+function prayerTimes(lat, lng, d){
+  const jd = Math.floor((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())/86400000) + 2440587.5) + 0.5;
+  const sp = sunPos(jd);
+  const noonUTC = fixAngle(12 - sp.eqt, 24) - lng/15;
+  const ha = ang => {
+    const c = (-Math.sin(ang*RAD) - Math.sin(sp.decl*RAD)*Math.sin(lat*RAD)) / (Math.cos(sp.decl*RAD)*Math.cos(lat*RAD));
+    return Math.acos(Math.min(1, Math.max(-1, c)))/RAD/15;
+  };
+  const asrAngle = -Math.atan(1/(1 + Math.tan(Math.abs(lat - sp.decl)*RAD)))/RAD;
+  const t = {
+    Fajr:    noonUTC - ha(18.5),
+    Dhuhr:   noonUTC + 2/60,
+    Asr:     noonUTC + ha(asrAngle),
+    Maghrib: noonUTC + ha(0.833),
+    Isha:    noonUTC + ha(18),
+  };
+  const out = {};
+  Object.keys(t).forEach(k=>{
+    const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) + t[k]*3600000);
+    out[k] = dt.getHours()*60 + dt.getMinutes(); // local minutes since midnight
+  });
+  return out;
+}
+function salahMarkers(){
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const co = TZ_COORDS[tz];
+  if(!co) return '';
+  const pt = prayerTimes(co[0], co[1], new Date());
+  let html = '';
+  Object.keys(pt).forEach(k=>{
+    const m = pt[k];
+    if(m >= CAL_START && m <= CAL_END)
+      html += `<div class="salahline" style="top:${(m-CAL_START)*K}px">🕌 ${k} ~${toHHMM(m)}</div>`;
+  });
+  return html;
+}
+
+// ---------- pillar analytics ----------
+function entryPillars(e){
+  const p = {pdi:0, esp:0, fnd:0, wld:0, soc:0};
+  (e.sessions||[]).forEach(id=>{
+    if(id==='pdi1'||id==='pdi2') p.pdi += 40;
+    else if(id==='esp1') p.esp += 15;
+    else if(id==='fnd1') p.fnd += 20;
+    else if(id==='wld1') p.wld += 10;
+    else if(id==='soc1') p.soc += 10;
+  });
+  (e.mvds||[]).forEach(id=>{
+    if(id==='mvd_esp') p.esp += 10;
+    else if(id==='mvd_fnd') p.fnd += 10;
+  });
+  return p;
+}
+const PILLARS = [
+  {k:'pdi', name:'PDI', c:'var(--pdi)'}, {k:'esp', name:'Spanish', c:'var(--esp)'},
+  {k:'fnd', name:'Foundations', c:'var(--fnd)'}, {k:'wld', name:'Wildcard', c:'var(--wld)'},
+  {k:'soc', name:'Social', c:'var(--soc)'},
+];
+function renderPillars(){
+  const el = document.getElementById('pillarChart');
+  if(!el) return;
+  const byWk = {};
+  state.history.forEach(e=>{
+    const w = isoWeek(e.date);
+    byWk[w] = byWk[w] || {pdi:0,esp:0,fnd:0,wld:0,soc:0};
+    const p = entryPillars(e);
+    PILLARS.forEach(x=>byWk[w][x.k]+=p[x.k]);
+  });
+  const weeks = Object.keys(byWk).sort().slice(-4);
+  if(!weeks.length){ el.innerHTML='<p class="hint">Log a few days and the pillars appear.</p>'; return; }
+  const maxT = Math.max(...weeks.map(w=>PILLARS.reduce((a,x)=>a+byWk[w][x.k],0)), 1);
+  let html = '<div class="hint" style="margin-bottom:8px">' + PILLARS.map(x=>`<span class="keydot" style="background:${x.c}"></span>${x.name}&nbsp;&nbsp;`).join('') + '</div>';
+  weeks.forEach(w=>{
+    const tot = PILLARS.reduce((a,x)=>a+byWk[w][x.k],0);
+    let segs = '';
+    PILLARS.forEach(x=>{
+      const v = byWk[w][x.k];
+      if(v>0) segs += `<span title="${x.name}: ${v}" style="display:inline-block; width:${(v/maxT*100)}%; height:100%; background:${x.c}; border-right:2px solid var(--surface)"></span>`;
+    });
+    html += `<div class="bar-row"><div class="name">${w.slice(5)}</div><div class="track" style="background:var(--page)">${segs}</div><div class="val">${tot}</div></div>`;
+  });
+  el.innerHTML = html;
+}
+
 // ---------- Blocks: Shovel-style timeboxing ----------
 const DAY_TEMPLATE = {
   weekday: [
@@ -1077,6 +1252,7 @@ function renderBlocks(){
   });
   const nowM = new Date().getHours()*60 + new Date().getMinutes();
   if(nowM >= CAL_START && nowM <= CAL_END) html += `<div class="nowline" style="top:${(nowM-CAL_START)*K}px"></div>`;
+  html += salahMarkers();
   cal.innerHTML = html;
   cal.querySelectorAll('.calblk').forEach(el=>attachDrag(el));
   cal.querySelectorAll('.bx').forEach(x=>x.addEventListener('pointerdown', e=>{ e.stopPropagation(); delBlock(parseInt(x.dataset.i,10)); }));
@@ -1279,7 +1455,13 @@ tickClock();
 dailyQuote();
 renderTrips();
 renderBlocks();
+renderCapture();
+loadDebrief();
 refresh();
+// deep link: xenien.github.io/engine/#debrief jumps straight to the daily debrief form
+if(location.hash === '#debrief'){
+  setTimeout(()=>{ document.getElementById('debrief').scrollIntoView({behavior:'smooth'}); }, 300);
+}
 // offline support
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 // pull cloud backup on open (non-blocking)
