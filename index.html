@@ -92,6 +92,8 @@
   .calhr{position:absolute; left:0; right:0; border-top:1px solid var(--grid); font-size:9.5px; color:var(--muted); padding-left:4px}
   .calblk{position:absolute; left:34px; right:4px; border-radius:7px; padding:2px 8px; font-size:11.5px; font-weight:600; overflow:hidden; touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; border-left:3px solid}
   .calblk .bx{position:absolute; top:1px; right:5px; cursor:pointer; font-weight:700; opacity:.6}
+  .rz{position:absolute; left:0; right:14px; height:9px; cursor:ns-resize; touch-action:none}
+  .rz-t{top:-3px} .rz-b{bottom:-3px}
   .calfree{position:absolute; left:34px; right:4px; border:1.5px dashed var(--baseline); border-radius:7px; font-size:10px; color:var(--muted); padding:1px 8px}
   .nowline{position:absolute; left:0; right:0; border-top:2px solid var(--esp); z-index:4}
   /* playbook */
@@ -153,7 +155,15 @@
       <button class="btn" onclick="navDay(1)" title="Next day" id="navFwd">›</button>
     </div>
     <div class="tiles">
-      <div class="tile hero"><div class="label">Points today</div><div class="value" id="ptsToday">0</div><div class="delta" id="ptsMax">of 191 possible</div></div>
+      <div class="tile hero" style="text-align:center">
+        <div class="label" style="text-align:left">Points today</div>
+        <svg viewBox="0 0 120 70" style="width:100%; max-width:190px; margin:0 auto; display:block" role="img" aria-label="Points earned vs still available today">
+          <path d="M10,62 A50,50 0 0 1 110,62" fill="none" stroke="var(--pdi-track)" stroke-width="11" stroke-linecap="round"/>
+          <path id="gaugeArc" d="M10,62 A50,50 0 0 1 110,62" fill="none" stroke="var(--pdi)" stroke-width="11" stroke-linecap="round" stroke-dasharray="0 158"/>
+          <text id="ptsToday" x="60" y="58" text-anchor="middle" font-size="27" font-weight="600" fill="var(--ink)">0</text>
+        </svg>
+        <div class="delta" id="ptsMax">—</div>
+      </div>
       <div class="tile"><div class="label">MVD status</div><div class="value" id="mvdStatus">0/3</div><div class="delta">the floor — never below this</div></div>
       <div class="tile"><div class="label">Streak (MVD days)</div><div class="value" id="streakVal">0</div><div class="delta" id="streakNote">log days to build it</div></div>
       <div class="tile"><div class="label">Spanish in One Month</div><div class="value" id="challengeDays">—</div><div class="delta">days left · started Jul 6, ends Aug 4 · cohort is the witness</div></div>
@@ -474,6 +484,25 @@ function slotBonus(id, ts){
   return 0;
 }
 function maxDay(){ return 30 + 48*2 + 20 + 25 + 10 + 10; } // 191 on a perfectly-slotted day
+// what an unchecked item could still earn if done in the best remaining window today
+function potentialNow(id){
+  const now = new Date();
+  const lh = now.getHours() + now.getMinutes()/60;
+  if(lh >= 21.75) return 0;
+  if(id==='pdi1'||id==='pdi2'){
+    const dxb = parseInt(now.toLocaleString('en-US',{timeZone:'Asia/Dubai',hour:'2-digit',hour12:false}),10);
+    return dxb < 18 ? 8 : 0;
+  }
+  if(id==='esp1') return lh < 9.5 ? 5 : 0;
+  if(id==='fnd1') return 5;                 // evening window still reachable until 21:45
+  return 0;
+}
+function availableNow(){
+  let a = 0;
+  MVD.forEach(i=>{ if(!today[i.id]) a += i.pts; });
+  SESSIONS.forEach(i=>{ if(!today[i.id]) a += i.pts + potentialNow(i.id); });
+  return a;
+}
 const FOUNDATIONS = [
   ['Jul 2026','Physical Fitness','Exercise 30 minutes every day'],
   ['Aug 2026','Productivity','Full-capture system — nothing lives in your head'],
@@ -627,7 +656,15 @@ function refresh(){
   document.getElementById('navFwd').style.visibility = viewingToday() ? 'hidden' : 'visible';
   const logBtn = document.querySelector('#tab-today .btnrow .btn.primary');
   if(logBtn) logBtn.textContent = viewingToday() ? 'Log today & copy summary' : 'Update this day';
-  document.getElementById('ptsToday').textContent = ptsToday();
+  const earned = ptsToday();
+  document.getElementById('ptsToday').textContent = earned;
+  // gauge: earned vs still-available (opportunity framing — what's still winnable right now)
+  const avail = viewingToday() ? availableNow() : 0;
+  const total = Math.max(earned + avail, 1);
+  document.getElementById('gaugeArc').setAttribute('stroke-dasharray', (earned/total*158).toFixed(1)+' 158');
+  document.getElementById('ptsMax').textContent = viewingToday()
+    ? (avail>0 ? avail+' still on the table today · perfect day 191' : 'everything winnable is won — 191 max')
+    : 'past day · '+earned+' banked';
   document.getElementById('mvdStatus').textContent = mvdCount()+'/3';
   const loggedToday = state.history.some(e=>e.date===dateStr());
   document.getElementById('streakVal').textContent = loggedToday ? streak() : streak() + ((viewingToday()&&mvdDone())?'+1':'');
@@ -1035,7 +1072,7 @@ function renderBlocks(){
   });
   blocks.forEach((b,i)=>{
     const top = (toMin(b.s)-CAL_START)*K, hh = Math.max(14, b.m*K-2);
-    html += `<div class="calblk" data-i="${i}" style="top:${top}px; height:${hh}px; background:var(--${b.key||'wld'}-track); border-left-color:var(--${b.key||'wld'})"><span class="bx" data-i="${i}">✕</span>${b.s} ${b.label}</div>`;
+    html += `<div class="calblk" data-i="${i}" style="top:${top}px; height:${hh}px; background:var(--${b.key||'wld'}-track); border-left-color:var(--${b.key||'wld'})"><span class="rz rz-t"></span><span class="bx" data-i="${i}">✕</span>${b.s} ${b.label}<span class="rz rz-b"></span></div>`;
   });
   const nowM = new Date().getHours()*60 + new Date().getMinutes();
   if(nowM >= CAL_START && nowM <= CAL_END) html += `<div class="nowline" style="top:${(nowM-CAL_START)*K}px"></div>`;
@@ -1088,26 +1125,48 @@ function addTask(){
 function toggleTask(i){ state.tasks[i].done = !state.tasks[i].done; save(); renderBlocks(); }
 function delTask(i){ state.tasks.splice(i,1); save(); renderBlocks(); }
 function attachDrag(el){
-  let startY=0, origTop=0, moved=false, dragging=false;
+  let startY=0, origTop=0, origH=0, moved=false, dragging=false, mode='move';
   el.addEventListener('pointerdown', e=>{
-    dragging=true; moved=false; startY=e.clientY; origTop=parseFloat(el.style.top);
+    mode = e.target.classList.contains('rz-t') ? 'top' : e.target.classList.contains('rz-b') ? 'bottom' : 'move';
+    dragging=true; moved=false; startY=e.clientY;
+    origTop=parseFloat(el.style.top); origH=parseFloat(el.style.height);
     el.setPointerCapture(e.pointerId);
-    el.style.zIndex=6; el.style.opacity=.85; el.style.cursor='grabbing';
+    el.style.zIndex=6; el.style.opacity=.85; if(mode==='move') el.style.cursor='grabbing';
   });
   el.addEventListener('pointermove', e=>{
     if(!dragging) return;
     const dy = e.clientY-startY;
     if(Math.abs(dy)>4) moved=true;
-    el.style.top = Math.max(0, Math.min((CAL_END-CAL_START)*K-14, origTop+dy)) + 'px';
+    if(mode==='move'){
+      el.style.top = Math.max(0, Math.min((CAL_END-CAL_START)*K-14, origTop+dy)) + 'px';
+    } else if(mode==='bottom'){
+      el.style.height = Math.max(10, origH+dy) + 'px';
+    } else { // top: move start, keep end fixed
+      const nt = Math.max(0, Math.min(origTop+origH-10, origTop+dy));
+      el.style.top = nt+'px'; el.style.height = (origH + (origTop-nt))+'px';
+    }
   });
   el.addEventListener('pointerup', e=>{
     if(!dragging) return;
     dragging=false; el.style.zIndex=''; el.style.opacity=''; el.style.cursor='grab';
     if(moved){
       const i = parseInt(el.dataset.i,10);
-      const mins = CAL_START + Math.round(parseFloat(el.style.top)/K/15)*15;
       const b = blocksFor(dateStr())[i];
-      if(b){ b.s = toHHMM(Math.max(CAL_START, Math.min(mins, CAL_END-b.m))); save(); }
+      if(b){
+        if(mode==='move'){
+          const mins = CAL_START + Math.round(parseFloat(el.style.top)/K/15)*15;
+          b.s = toHHMM(Math.max(CAL_START, Math.min(mins, CAL_END-b.m)));
+        } else if(mode==='bottom'){
+          b.m = Math.max(15, Math.round(parseFloat(el.style.height)/K/15)*15);
+          if(toMin(b.s)+b.m > CAL_END) b.m = CAL_END - toMin(b.s);
+        } else {
+          const origEnd = toMin(b.s)+b.m;
+          const ns = CAL_START + Math.round(parseFloat(el.style.top)/K/15)*15;
+          const clamped = Math.max(CAL_START, Math.min(ns, origEnd-15));
+          b.s = toHHMM(clamped); b.m = origEnd - clamped;
+        }
+        save();
+      }
     }
     renderBlocks();
   });
@@ -1141,6 +1200,15 @@ function addQuick(){
   if(ghToken() && navigator.onLine) syncNow();
 }
 setInterval(renderBlocks, 60000);
+// keep now-line, clock, and gauge honest when the app resumes from background (iOS home-screen apps
+// freeze timers while backgrounded — this fires the moment the app is foregrounded again)
+let lastSeenDate = null;
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState !== 'visible') return;
+  if(lastSeenDate && lastSeenDate !== dateStr()){ location.reload(); return; } // day rolled over while asleep
+  tickClock(); renderBlocks(); refresh();
+  if(ghToken() && navigator.onLine) syncPull().then(()=>refresh()).catch(()=>{});
+});
 
 // ---------- tabs & init ----------
 document.querySelectorAll('nav button').forEach(b=>{
@@ -1202,6 +1270,7 @@ function renderChallenge(){
 })();
 load();
 viewDate = dateStr();
+lastSeenDate = dateStr();
 today = bufferFor(viewDate);
 renderFoundations();
 renderChallenge();
