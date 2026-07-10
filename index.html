@@ -83,6 +83,17 @@
   .fcell .hb{font-size:12.5px; color:var(--ink2)}
   .fcell.current{border-color:var(--fnd); border-width:2px}
   .fcell.current .mo::after{content:" · now"; color:var(--fnd); font-weight:700}
+  /* timeblock calendar */
+  .tbwrap{display:flex; gap:14px; align-items:flex-start}
+  .tbcal{flex:0 0 320px}
+  .tbmain{flex:1; min-width:0}
+  @media(max-width:760px){ .tbwrap{flex-direction:column} .tbcal{flex:auto; width:100%} }
+  #calBody{position:relative; border-left:1px solid var(--grid)}
+  .calhr{position:absolute; left:0; right:0; border-top:1px solid var(--grid); font-size:9.5px; color:var(--muted); padding-left:4px}
+  .calblk{position:absolute; left:34px; right:4px; border-radius:7px; padding:2px 8px; font-size:11.5px; font-weight:600; overflow:hidden; touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; border-left:3px solid}
+  .calblk .bx{position:absolute; top:1px; right:5px; cursor:pointer; font-weight:700; opacity:.6}
+  .calfree{position:absolute; left:34px; right:4px; border:1.5px dashed var(--baseline); border-radius:7px; font-size:10px; color:var(--muted); padding:1px 8px}
+  .nowline{position:absolute; left:0; right:0; border-top:2px solid var(--esp); z-index:4}
   /* playbook */
   .rule{padding:10px 0; border-bottom:1px solid var(--grid)}
   .rule:last-child{border:none}
@@ -123,7 +134,7 @@
 
   <nav>
     <button class="active" data-tab="today">Today</button>
-    <button data-tab="blocks">Blocks</button>
+    <button data-tab="blocks">Timeblock</button>
     <button data-tab="week">Week</button>
     <button data-tab="history">History</button>
     <button data-tab="foundations">Foundations</button>
@@ -177,34 +188,50 @@
     </div>
   </section>
 
-  <!-- ============ BLOCKS (Shovel-style timeboxing) ============ -->
+  <!-- ============ TIMEBLOCK (Shovel-style) ============ -->
   <section class="tab" id="tab-blocks">
-    <div class="tiles">
-      <div class="tile"><div class="label">Free time left today</div><div class="value" id="freeTime">—</div><div class="delta">pockets between now, your blocks, and 21:45</div></div>
-      <div class="tile"><div class="label">Time needed (open tasks)</div><div class="value" id="needTime">—</div><div class="delta">sum of your task estimates</div></div>
-      <div class="tile"><div class="label">The Cushion</div><div class="value" id="cushion" style="font-size:22px">—</div><div class="delta" id="cushionNote">free minus needed</div></div>
-    </div>
-
     <div class="card">
-      <h2>Tasks — with honest time estimates</h2>
-      <p class="hint">The Shovel rule: a task without a time estimate is a lie. Add what must happen, guess the minutes honestly, tick when done.</p>
+      <h2>Quick commitment — for when it's urgent</h2>
+      <p class="hint">Something just landed? Name it, say when, done. Works for 20 minutes from now or three months out — future ones appear on that day's calendar automatically.</p>
       <div class="btnrow" style="align-items:center">
-        <input id="taskName" placeholder="Task (e.g. WMP follow-up email)" style="flex:1; min-width:150px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <input id="taskMins" placeholder="min" type="number" step="5" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <button class="btn" onclick="addTask()">Add</button>
+        <input id="qcLabel" placeholder="What (e.g. call Azeem)" style="flex:1; min-width:130px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="qcDate" type="date" style="width:135px; font:13px inherit; padding:7px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="qcTime" placeholder="14:00" style="width:66px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="qcMins" placeholder="min" type="number" step="5" value="30" style="width:60px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <button class="btn" onclick="quickNow(15)">Now +15m</button>
+        <button class="btn" onclick="quickNow(60)">In 1h</button>
+        <button class="btn primary" onclick="addQuick()">Commit</button>
       </div>
-      <div id="taskList" style="margin-top:8px"></div>
+      <div id="upcomingList" class="hint" style="margin-top:8px"></div>
     </div>
 
-    <div class="card">
-      <h2>Today's timeline</h2>
-      <p class="hint">Your default-week skeleton, laid on the clock. Gray gaps are free pockets — that's where tasks go. Tap a block to remove it; add custom blocks below.</p>
-      <div id="timeline" style="margin-top:10px"></div>
-      <div class="btnrow" style="align-items:center; margin-top:12px">
-        <input id="blkLabel" placeholder="Block label" style="flex:1; min-width:120px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <input id="blkStart" placeholder="14:00" style="width:70px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <input id="blkMins" placeholder="min" type="number" step="15" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <button class="btn" onclick="addBlock()">Add block</button>
+    <div class="tbwrap">
+      <div class="card tbcal">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+          <h2 style="margin:0">My timeblock calendar</h2>
+          <button class="btn" style="font-size:11.5px; padding:5px 10px" onclick="resetDayBlocks()">Reset to default</button>
+        </div>
+        <p class="hint" id="calDateLine" style="margin:4px 0 10px">—</p>
+        <div id="calBody"></div>
+        <p class="hint" style="margin-top:8px">Drag a block to move it (snaps to 15 min). ✕ removes it. Dashed = free pockets.</p>
+      </div>
+
+      <div class="tbmain">
+        <div class="tiles">
+          <div class="tile"><div class="label">Free time left today</div><div class="value" id="freeTime">—</div><div class="delta">pockets between now, your blocks, and 21:45</div></div>
+          <div class="tile"><div class="label">Time needed (open tasks)</div><div class="value" id="needTime">—</div><div class="delta">sum of your task estimates</div></div>
+          <div class="tile"><div class="label">The Cushion</div><div class="value" id="cushion" style="font-size:22px">—</div><div class="delta" id="cushionNote">free minus needed</div></div>
+        </div>
+        <div class="card">
+          <h2>Tasks — with honest time estimates</h2>
+          <p class="hint">The Shovel rule: a task without a time estimate is a lie. Add what must happen, guess the minutes honestly, tick when done.</p>
+          <div class="btnrow" style="align-items:center">
+            <input id="taskName" placeholder="Task (e.g. WMP follow-up email)" style="flex:1; min-width:150px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+            <input id="taskMins" placeholder="min" type="number" step="5" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+            <button class="btn" onclick="addTask()">Add</button>
+          </div>
+          <div id="taskList" style="margin-top:8px"></div>
+        </div>
       </div>
     </div>
   </section>
@@ -799,6 +826,8 @@ function mergeStates(remote){
   state.reviews = Object.assign({}, remote.reviews||{}, state.reviews||{});
   state.challenge = Object.assign({}, remote.challenge||{}, state.challenge||{});
   if((!state.trips || !state.trips.length) && remote.trips) state.trips = remote.trips;
+  state.blocks = Object.assign({}, remote.blocks||{}, state.blocks||{});
+  if((!state.tasks || !state.tasks.length) && remote.tasks) state.tasks = remote.tasks;
 }
 
 async function syncPull(){
@@ -989,24 +1018,41 @@ function pockets(d){
   if(cursor < DAY_END) free.push({s:cursor, e:DAY_END});
   return free.filter(p=>p.e-p.s >= 15);
 }
+const CAL_START = 6*60, CAL_END = 23*60, K = 0.8; // px per minute
 function renderBlocks(){
-  const tl = document.getElementById('timeline');
-  if(!tl) return;
+  const cal = document.getElementById('calBody');
+  if(!cal) return;
   const d = dateStr();
-  const blocks = blocksFor(d).slice().sort((a,b)=>toMin(a.s)-toMin(b.s));
+  const blocks = blocksFor(d);
   const free = pockets(d);
-  const items = [
-    ...blocks.map((b,i)=>({s:toMin(b.s), e:toMin(b.s)+b.m, label:b.label, key:b.key, idx:i, type:'block'})),
-    ...free.map(p=>({s:p.s, e:p.e, label:'free pocket · '+(p.e-p.s)+' min', type:'free'}))
-  ].sort((a,b)=>a.s-b.s);
+  document.getElementById('calDateLine').textContent =
+    new Date(d+'T12:00:00').toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + ' · 06:00 → 23:00';
+  cal.style.height = (CAL_END-CAL_START)*K + 'px';
+  let html = '';
+  for(let h=6; h<=22; h++) html += `<div class="calhr" style="top:${(h*60-CAL_START)*K}px">${String(h).padStart(2,'0')}:00</div>`;
+  free.forEach(p=>{
+    html += `<div class="calfree" style="top:${(p.s-CAL_START)*K}px; height:${(p.e-p.s)*K-2}px">free · ${p.e-p.s}m</div>`;
+  });
+  blocks.forEach((b,i)=>{
+    const top = (toMin(b.s)-CAL_START)*K, hh = Math.max(14, b.m*K-2);
+    html += `<div class="calblk" data-i="${i}" style="top:${top}px; height:${hh}px; background:var(--${b.key||'wld'}-track); border-left-color:var(--${b.key||'wld'})"><span class="bx" data-i="${i}">✕</span>${b.s} ${b.label}</div>`;
+  });
   const nowM = new Date().getHours()*60 + new Date().getMinutes();
-  tl.innerHTML = items.map(it=>{
-    const h = Math.max(30, (it.e-it.s)*0.85);
-    const past = it.e <= nowM;
-    if(it.type==='free')
-      return `<div style="display:flex; gap:10px; margin:3px 0; opacity:${past?.45:1}"><div style="width:88px; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; padding-top:4px">${toHHMM(it.s)}–${toHHMM(it.e)}</div><div style="flex:1; min-height:${h*0.6}px; border:1.5px dashed var(--baseline); border-radius:8px; display:flex; align-items:center; padding:4px 12px; font-size:12px; color:var(--muted)">${it.label}</div></div>`;
-    return `<div style="display:flex; gap:10px; margin:3px 0; opacity:${past?.45:1}"><div style="width:88px; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; padding-top:4px">${toHHMM(it.s)}–${toHHMM(it.e)}</div><div onclick="delBlock(${it.idx})" title="tap to remove" style="flex:1; min-height:${h*0.6}px; cursor:pointer; background:var(--${it.key}-track); border-left:3px solid var(--${it.key}); border-radius:8px; display:flex; align-items:center; padding:4px 12px; font-size:13px; font-weight:600">${it.label}</div></div>`;
-  }).join('');
+  if(nowM >= CAL_START && nowM <= CAL_END) html += `<div class="nowline" style="top:${(nowM-CAL_START)*K}px"></div>`;
+  cal.innerHTML = html;
+  cal.querySelectorAll('.calblk').forEach(el=>attachDrag(el));
+  cal.querySelectorAll('.bx').forEach(x=>x.addEventListener('pointerdown', e=>{ e.stopPropagation(); delBlock(parseInt(x.dataset.i,10)); }));
+  // upcoming commitments (future days)
+  const up = [];
+  Object.keys(state.blocks||{}).filter(k=>k>d).sort().forEach(k=>{
+    (state.blocks[k]||[]).filter(b=>b.custom).forEach((b)=>up.push({date:k, b}));
+  });
+  const ul = document.getElementById('upcomingList');
+  if(ul) ul.innerHTML = up.length
+    ? '<b style="color:var(--ink)">Upcoming:</b> ' + up.map(u=>`${u.date} ${u.b.s} — ${u.b.label} (${u.b.m}m) <span style="cursor:pointer" onclick="delFuture('${u.date}','${u.b.s}')">✕</span>`).join(' · ')
+    : 'No future commitments booked.';
+  const qd = document.getElementById('qcDate');
+  if(qd && !qd.value) qd.value = d;
   // cushion math
   const freeMin = free.reduce((a,p)=>a+(p.e-p.s),0);
   state.tasks = state.tasks || [];
@@ -1041,16 +1087,59 @@ function addTask(){
 }
 function toggleTask(i){ state.tasks[i].done = !state.tasks[i].done; save(); renderBlocks(); }
 function delTask(i){ state.tasks.splice(i,1); save(); renderBlocks(); }
-function addBlock(){
-  const label = document.getElementById('blkLabel').value.trim();
-  const s = document.getElementById('blkStart').value.trim();
-  const m = parseInt(document.getElementById('blkMins').value,10);
-  if(!label || !/^\d{1,2}:\d{2}$/.test(s) || !m) return;
-  blocksFor(dateStr()).push({s, m, label, key:'wld'});
-  document.getElementById('blkLabel').value=''; document.getElementById('blkStart').value=''; document.getElementById('blkMins').value='';
-  save(); renderBlocks();
+function attachDrag(el){
+  let startY=0, origTop=0, moved=false, dragging=false;
+  el.addEventListener('pointerdown', e=>{
+    dragging=true; moved=false; startY=e.clientY; origTop=parseFloat(el.style.top);
+    el.setPointerCapture(e.pointerId);
+    el.style.zIndex=6; el.style.opacity=.85; el.style.cursor='grabbing';
+  });
+  el.addEventListener('pointermove', e=>{
+    if(!dragging) return;
+    const dy = e.clientY-startY;
+    if(Math.abs(dy)>4) moved=true;
+    el.style.top = Math.max(0, Math.min((CAL_END-CAL_START)*K-14, origTop+dy)) + 'px';
+  });
+  el.addEventListener('pointerup', e=>{
+    if(!dragging) return;
+    dragging=false; el.style.zIndex=''; el.style.opacity=''; el.style.cursor='grab';
+    if(moved){
+      const i = parseInt(el.dataset.i,10);
+      const mins = CAL_START + Math.round(parseFloat(el.style.top)/K/15)*15;
+      const b = blocksFor(dateStr())[i];
+      if(b){ b.s = toHHMM(Math.max(CAL_START, Math.min(mins, CAL_END-b.m))); save(); }
+    }
+    renderBlocks();
+  });
+  el.addEventListener('pointercancel', ()=>{ dragging=false; renderBlocks(); });
 }
 function delBlock(i){ blocksFor(dateStr()).splice(i,1); save(); renderBlocks(); }
+function delFuture(date, s){
+  const arr = state.blocks[date]||[];
+  const i = arr.findIndex(b=>b.s===s && b.custom);
+  if(i>=0){ arr.splice(i,1); save(); renderBlocks(); }
+}
+function resetDayBlocks(){
+  delete state.blocks[dateStr()];
+  save(); renderBlocks();
+}
+function quickNow(offsetMin){
+  const t = new Date(Date.now() + offsetMin*60000);
+  const m = Math.ceil((t.getHours()*60+t.getMinutes())/5)*5;
+  document.getElementById('qcDate').value = dateStr();
+  document.getElementById('qcTime').value = toHHMM(Math.min(m, CAL_END-15));
+}
+function addQuick(){
+  const label = document.getElementById('qcLabel').value.trim();
+  const date = document.getElementById('qcDate').value;
+  const s = document.getElementById('qcTime').value.trim();
+  const m = parseInt(document.getElementById('qcMins').value,10) || 30;
+  if(!label || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{1,2}:\d{2}$/.test(s)) return;
+  blocksFor(date).push({s, m, label, key:'wld', custom:true});
+  document.getElementById('qcLabel').value=''; document.getElementById('qcTime').value='';
+  save(); renderBlocks();
+  if(ghToken() && navigator.onLine) syncNow();
+}
 setInterval(renderBlocks, 60000);
 
 // ---------- tabs & init ----------
