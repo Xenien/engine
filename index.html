@@ -100,12 +100,30 @@
 <body>
 <div class="wrap">
   <header>
-    <h1>Adam's Engine</h1>
+    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap">
+      <h1>Adam's Engine</h1>
+      <button class="btn" style="font-size:12.5px" onclick="openReflect()">Feeling reflective?</button>
+    </div>
     <div class="sub" id="todayline">—</div>
+    <div class="sub" id="clockline" style="font-variant-numeric:tabular-nums">—</div>
+    <div class="sub" id="quoteline" style="margin-top:8px; font-style:italic; font-size:13px">—</div>
   </header>
+
+  <div id="reflectBox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50; padding:24px" onclick="closeReflect(event)">
+    <div class="card" style="max-width:520px; margin:12vh auto 0; padding:24px" onclick="event.stopPropagation()">
+      <h2 id="reflectTime" style="margin-bottom:12px">—</h2>
+      <p id="reflectText" style="font-size:16px; line-height:1.65">—</p>
+      <p id="reflectSrc" class="hint" style="margin-top:10px">—</p>
+      <div class="btnrow" style="margin-top:14px">
+        <button class="btn" onclick="openReflect()">Another</button>
+        <button class="btn primary" onclick="document.getElementById('reflectBox').style.display='none'">Back to the work</button>
+      </div>
+    </div>
+  </div>
 
   <nav>
     <button class="active" data-tab="today">Today</button>
+    <button data-tab="blocks">Blocks</button>
     <button data-tab="week">Week</button>
     <button data-tab="history">History</button>
     <button data-tab="foundations">Foundations</button>
@@ -124,10 +142,11 @@
       <button class="btn" onclick="navDay(1)" title="Next day" id="navFwd">›</button>
     </div>
     <div class="tiles">
-      <div class="tile hero"><div class="label">Points today</div><div class="value" id="ptsToday">0</div><div class="delta" id="ptsMax">of 135 possible</div></div>
+      <div class="tile hero"><div class="label">Points today</div><div class="value" id="ptsToday">0</div><div class="delta" id="ptsMax">of 191 possible</div></div>
       <div class="tile"><div class="label">MVD status</div><div class="value" id="mvdStatus">0/3</div><div class="delta">the floor — never below this</div></div>
       <div class="tile"><div class="label">Streak (MVD days)</div><div class="value" id="streakVal">0</div><div class="delta" id="streakNote">log days to build it</div></div>
       <div class="tile"><div class="label">Spanish in One Month</div><div class="value" id="challengeDays">—</div><div class="delta">days left · started Jul 6, ends Aug 4 · cohort is the witness</div></div>
+      <div class="tile"><div class="label" id="tripLabel">Next trip</div><div class="value" id="tripDays">—</div><div class="delta" id="tripNote">add your trip in the Data tab</div></div>
     </div>
 
     <div class="card">
@@ -158,13 +177,45 @@
     </div>
   </section>
 
+  <!-- ============ BLOCKS (Shovel-style timeboxing) ============ -->
+  <section class="tab" id="tab-blocks">
+    <div class="tiles">
+      <div class="tile"><div class="label">Free time left today</div><div class="value" id="freeTime">—</div><div class="delta">pockets between now, your blocks, and 21:45</div></div>
+      <div class="tile"><div class="label">Time needed (open tasks)</div><div class="value" id="needTime">—</div><div class="delta">sum of your task estimates</div></div>
+      <div class="tile"><div class="label">The Cushion</div><div class="value" id="cushion" style="font-size:22px">—</div><div class="delta" id="cushionNote">free minus needed</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Tasks — with honest time estimates</h2>
+      <p class="hint">The Shovel rule: a task without a time estimate is a lie. Add what must happen, guess the minutes honestly, tick when done.</p>
+      <div class="btnrow" style="align-items:center">
+        <input id="taskName" placeholder="Task (e.g. WMP follow-up email)" style="flex:1; min-width:150px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="taskMins" placeholder="min" type="number" step="5" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <button class="btn" onclick="addTask()">Add</button>
+      </div>
+      <div id="taskList" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card">
+      <h2>Today's timeline</h2>
+      <p class="hint">Your default-week skeleton, laid on the clock. Gray gaps are free pockets — that's where tasks go. Tap a block to remove it; add custom blocks below.</p>
+      <div id="timeline" style="margin-top:10px"></div>
+      <div class="btnrow" style="align-items:center; margin-top:12px">
+        <input id="blkLabel" placeholder="Block label" style="flex:1; min-width:120px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="blkStart" placeholder="14:00" style="width:70px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="blkMins" placeholder="min" type="number" step="15" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <button class="btn" onclick="addBlock()">Add block</button>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ WEEK ============ -->
   <section class="tab" id="tab-week">
     <div class="tiles">
       <div class="tile"><div class="label">This week</div><div class="value" id="wkPts">0</div><div class="delta" id="wkDelta">vs last week —</div></div>
       <div class="tile"><div class="label">Personal record (week)</div><div class="value" id="wkPR">0</div><div class="delta">beat it</div></div>
       <div class="tile"><div class="label">Days logged this week</div><div class="value" id="wkDays">0</div><div class="delta">target 7</div></div>
-      <div class="tile"><div class="label">Rank this week</div><div class="value" id="wkRank" style="font-size:20px">—</div><div class="delta">Bronze 400 · Silver 550 · Gold 700</div></div>
+      <div class="tile"><div class="label">Rank this week</div><div class="value" id="wkRank" style="font-size:20px">—</div><div class="delta">Bronze 550 · Silver 750 · Gold 950</div></div>
     </div>
 
     <div class="card">
@@ -294,14 +345,14 @@
       <table>
         <tr><th>Action</th><th style="text-align:right">Points</th></tr>
         <tr><td>Each MVD item (3 total)</td><td style="text-align:right">10</td></tr>
-        <tr><td>PDI deep-work block (90 min, max 2/day)</td><td style="text-align:right">20</td></tr>
-        <tr><td>Spanish full session (30+ min)</td><td style="text-align:right">15</td></tr>
-        <tr><td>Foundations evening block</td><td style="text-align:right">20</td></tr>
+        <tr><td>PDI deep-work block (90 min, max 2/day)</td><td style="text-align:right">40 <span class="hint">(48 before 18:00 Dubai)</span></td></tr>
+        <tr><td>Spanish full session (30+ min)</td><td style="text-align:right">15 <span class="hint">(20 before 09:30)</span></td></tr>
+        <tr><td>Foundations evening block</td><td style="text-align:right">20 <span class="hint">(25 from 19:00)</span></td></tr>
         <tr><td>Wildcard session</td><td style="text-align:right">10</td></tr>
         <tr><td>Social bonus — any session with / taught to / reported to a human</td><td style="text-align:right">+10</td></tr>
         <tr><td>Comeback bonus — first day back after a miss</td><td style="text-align:right">+15</td></tr>
       </table>
-      <p class="hint" style="margin-top:8px">Max ordinary day = 135. A perfect week ≈ 800+ — Gold at 700 means roughly six strong days. It's reachable and it's not free. That's the point.</p>
+      <p class="hint" style="margin-top:8px">Right-slot rule: the bonus is for doing the thing in its designed window — never for delaying it. Bonuses need a live checkbox tick (backfilled days score base) and all bonuses die at the 21:45 bell. Max perfectly-slotted day = 191. Gold at 950 ≈ six strong days.</p>
     </div>
 
     <div class="card">
@@ -338,6 +389,18 @@
     </div>
 
     <div class="card">
+      <h2>Trips</h2>
+      <p class="hint">Next trip shows on Today with a countdown and how many offline deep blocks the flight is worth. Date format: YYYY-MM-DD.</p>
+      <div class="btnrow" style="align-items:center">
+        <input id="tripDest" placeholder="Destination (e.g. China)" style="flex:1; min-width:110px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="tripDate" placeholder="2026-07-15" style="width:110px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="tripHours" placeholder="hrs" type="number" step="0.5" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <button class="btn" onclick="addTrip()">Add</button>
+      </div>
+      <div id="tripList" class="hint" style="margin-top:8px">No trips yet.</div>
+    </div>
+
+    <div class="card">
       <h2>Your data (manual fallback)</h2>
       <p class="hint">With cloud sync active above, this section is just the escape hatch — the cloud is the real backup. Export/Import remains useful for a one-off copy or if GitHub is ever unreachable. Clearing browser data on this device loses nothing as long as sync is configured.</p>
       <h3>Export</h3>
@@ -361,13 +424,29 @@ const MVD = [
   {id:'mvd_log', t:'Score the day', d:'Check boxes, hit Log. 2 minutes. The day is not over until this is done.', pts:10},
 ];
 const SESSIONS = [
-  {id:'pdi1', t:'PDI Deep Block 1', d:'90 min, hardest task first', pts:20, key:'pdi'},
-  {id:'pdi2', t:'PDI Deep Block 2', d:'90 min', pts:20, key:'pdi'},
-  {id:'esp1', t:'Spanish full session', d:'30+ min sprint, or a live speaking session', pts:15, key:'esp'},
-  {id:'fnd1', t:'Foundations block', d:'75 min lesson + habit rep', pts:20, key:'fnd'},
+  {id:'pdi1', t:'PDI Deep Block 1', d:'90 min, hardest task first · in-window bonus before 18:00 Dubai', pts:40, key:'pdi'},
+  {id:'pdi2', t:'PDI Deep Block 2', d:'90 min · in-window bonus before 18:00 Dubai', pts:40, key:'pdi'},
+  {id:'esp1', t:'Spanish full session', d:'30+ min sprint or live speaking · morning-slot bonus before 09:30', pts:15, key:'esp'},
+  {id:'fnd1', t:'Foundations block', d:'75 min lesson + habit rep · evening-slot bonus 19:00–21:45', pts:20, key:'fnd'},
   {id:'wld1', t:'Wildcard session', d:'Your current new thing — sanctioned novelty', pts:10, key:'wld'},
   {id:'soc1', t:'Social bonus', d:'Any session done with / taught to / reported to a human', pts:10, key:'soc'},
 ];
+// right-slot bonuses: extra points for doing the thing in its DESIGNED window.
+// Bonuses need a timestamp (checked live, not backfilled) and die at the 21:45 cutoff.
+function slotBonus(id, ts){
+  if(typeof ts !== 'number') return 0;               // legacy/backfilled checks: base only
+  const d = new Date(ts);
+  const localH = d.getHours() + d.getMinutes()/60;
+  if(localH >= 21.75) return 0;                      // after the 21:45 bell: base only
+  if(id==='pdi1' || id==='pdi2'){
+    const dxb = parseInt(d.toLocaleString('en-US',{timeZone:'Asia/Dubai',hour:'2-digit',hour12:false}),10);
+    return dxb < 18 ? 8 : 0;                         // 40 → 48 inside the Dubai work window
+  }
+  if(id==='esp1') return localH < 9.5 ? 5 : 0;       // 15 → 20 in the morning sprint
+  if(id==='fnd1') return localH >= 19 ? 5 : 0;       // 20 → 25 in the evening slot
+  return 0;
+}
+function maxDay(){ return 30 + 48*2 + 20 + 25 + 10 + 10; } // 191 on a perfectly-slotted day
 const FOUNDATIONS = [
   ['Jul 2026','Physical Fitness','Exercise 30 minutes every day'],
   ['Aug 2026','Productivity','Full-capture system — nothing lives in your head'],
@@ -440,10 +519,14 @@ function renderChecks(){
     const div = document.createElement('label');
     div.className = 'check' + (today[item.id] ? ' done':'');
     const dot = item.key ? `<span class="keydot" style="background:var(--${item.key==='soc'?'pdi':item.key})"></span>` : '';
+    // checked: show what it earned. unchecked: show what it's worth RIGHT NOW (incl. live slot bonus)
+    const liveBonus = item.key ? slotBonus(item.id, today[item.id] || Date.now()) : 0;
+    const shown = item.pts + (viewingToday() ? liveBonus : (typeof today[item.id]==='number' ? slotBonus(item.id, today[item.id]) : 0));
+    const hot = liveBonus>0 ? ' style="color:var(--goodtext)"' : '';
     div.innerHTML = `<input type="checkbox" ${today[item.id]?'checked':''}>
       <div><div class="t">${dot}${item.t}</div><div class="d">${item.d}</div></div>
-      <div class="pts">+${item.pts}</div>`;
-    div.querySelector('input').addEventListener('change', e=>{ today[item.id]=e.target.checked; refresh(); });
+      <div class="pts"${hot}>+${shown}</div>`;
+    div.querySelector('input').addEventListener('change', e=>{ today[item.id] = e.target.checked ? Date.now() : false; refresh(); });
     container.appendChild(div);
   };
   const m = document.getElementById('mvdList'); m.innerHTML='';
@@ -455,7 +538,7 @@ function renderChecks(){
 function ptsToday(){
   let p = 0;
   MVD.forEach(i=>{ if(today[i.id]) p+=i.pts; });
-  SESSIONS.forEach(i=>{ if(today[i.id]) p+=i.pts; });
+  SESSIONS.forEach(i=>{ if(today[i.id]) p += i.pts + slotBonus(i.id, today[i.id]); });
   // comeback bonus: the most recent logged day BEFORE the viewed day missed its MVD
   const prev = state.history.filter(e=>e.date<viewDate).pop();
   if(prev && !prev.mvd && mvdDone()) p += 15;
@@ -490,7 +573,7 @@ function weekStats(){
   const prevPts = prevWk ? state.history.filter(e=>isoWeek(e.date)===prevWk).reduce((a,e)=>a+e.pts,0) : 0;
   return {pts, ptsExclToday, days:entries.length, counts, prevPts};
 }
-function rank(p){ return p>=700?'Gold':p>=550?'Silver':p>=400?'Bronze':'—'; }
+function rank(p){ return p>=950?'Gold':p>=750?'Silver':p>=550?'Bronze':'—'; }
 function dateStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
 let reconstructed = false;
@@ -715,6 +798,7 @@ function mergeStates(remote){
   state.prWeek = Math.max(state.prWeek||0, remote.prWeek||0);
   state.reviews = Object.assign({}, remote.reviews||{}, state.reviews||{});
   state.challenge = Object.assign({}, remote.challenge||{}, state.challenge||{});
+  if((!state.trips || !state.trips.length) && remote.trips) state.trips = remote.trips;
 }
 
 async function syncPull(){
@@ -753,6 +837,221 @@ async function syncNow(){
     setSync('Sync failed ('+e.message+'). Data is safe locally; check the token has Contents read/write on '+SYNC.repo+'.');
   }
 }
+
+// ---------- clock, timezone, quotes, reflection, trips ----------
+const TZ_COUNTRY = {
+  'Asia/Kuala_Lumpur':'🇲🇾 Malaysia','Asia/Dubai':'🇦🇪 UAE','Asia/Riyadh':'🇸🇦 Saudi Arabia',
+  'Asia/Shanghai':'🇨🇳 China','Asia/Singapore':'🇸🇬 Singapore','Europe/Vienna':'🇦🇹 Austria',
+  'Asia/Qatar':'🇶🇦 Qatar','Asia/Bahrain':'🇧🇭 Bahrain','Asia/Kuwait':'🇰🇼 Kuwait','Asia/Jakarta':'🇮🇩 Indonesia'
+};
+function tickClock(){
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  const where = TZ_COUNTRY[tz] || tz.replace('_',' ');
+  const now = new Date();
+  const local = now.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const dxbH = parseInt(now.toLocaleString('en-US',{timeZone:'Asia/Dubai',hour:'2-digit',hour12:false}),10);
+  const dxb = now.toLocaleTimeString('en-GB',{timeZone:'Asia/Dubai',hour:'2-digit',minute:'2-digit'});
+  const pdi = dxbH < 18 ? 'PDI window OPEN (closes 18:00 DXB)' : 'PDI window closed';
+  const el = document.getElementById('clockline');
+  if(el) el.textContent = `${local} · ${where} · Dubai ${dxb} — ${pdi}`;
+}
+setInterval(tickClock, 15000);
+
+const QUOTES = [
+  ['At dawn, when you have trouble getting out of bed, tell yourself: I am rising to do the work of a human being.','Marcus Aurelius, Meditations 5.1'],
+  ['Waste no more time arguing what a good man should be. Be one.','Marcus Aurelius'],
+  ['You have power over your mind — not outside events. Realize this, and you will find strength.','Marcus Aurelius'],
+  ['It is not that we have a short time to live, but that we waste a lot of it.','Seneca, On the Shortness of Life'],
+  ['Luck is what happens when preparation meets opportunity.','attributed to Seneca'],
+  ['First say to yourself what you would be; and then do what you have to do.','Epictetus'],
+  ['How long are you going to wait before you demand the best for yourself?','Epictetus'],
+  ['The impediment to action advances action. What stands in the way becomes the way.','Marcus Aurelius (via Ryan Holiday, The Obstacle Is the Way)'],
+  ['We are what we repeatedly do while nobody is watching.','Ryan Holiday, paraphrasing his own refrain'],
+  ['Mastery is not a function of genius or talent. It is a function of time and intense focus.','Robert Greene, Mastery'],
+  ['The future you have tomorrow won\'t be built by the future you have tomorrow, but by the present.','Robert Greene, The Daily Laws'],
+  ['Change your life today. Don\'t gamble on the future, act now, without delay.','Simone de Beauvoir'],
+  ['It isn\'t what we say or think that defines us, but what we do.','attributed to Jane Austen, Sense and Sensibility'],
+  ['Know your own happiness. Want for nothing but patience — or give it a more fascinating name: call it hope.','Jane Austen'],
+];
+function dailyQuote(){
+  const seed = dateStr().split('-').reduce((a,x)=>a+parseInt(x,10),0);
+  const q = QUOTES[seed % QUOTES.length];
+  const el = document.getElementById('quoteline');
+  if(el) el.innerHTML = '“'+q[0]+'” <span style="font-style:normal; color:var(--muted)">— '+q[1]+'</span>';
+}
+
+const REFLECTIONS = [
+  {t:'morning', q:'Actions are but by intentions, and every man shall have only that which he intended.', s:'Hadith, Sahih al-Bukhari 1 — set the niyyah before the work'},
+  {t:'morning', q:'O son of Adam, you are nothing but a number of days. Whenever each day passes, a part of you has gone.', s:'Hasan al-Basri'},
+  {t:'day', q:'The most beloved of deeds to Allah are those done most consistently, even if they are few.', s:'Hadith, Sahih al-Bukhari 6464 — your floor IS worship'},
+  {t:'day', q:'Verily, Allah loves that when any of you does a deed, he perfects it.', s:'Hadith, al-Bayhaqi — ihsan: excellence in the work itself'},
+  {t:'day', q:'Knowledge without action is insanity, and action without knowledge is vanity.', s:'Imam al-Ghazali, Ayyuhal Walad'},
+  {t:'day', q:'Do not be a slave to another when Allah has created you free.', s:'Ali ibn Abi Talib'},
+  {t:'evening', q:'Take account of yourselves before you are taken to account; weigh your deeds before they are weighed for you.', s:'Umar ibn al-Khattab — muhasabah: tonight\'s 21:45 is exactly this'},
+  {t:'evening', q:'Wasted time is worse than death, for death separates you from this world, while wasted time separates you from Allah.', s:'Ibn Qayyim al-Jawziyya'},
+  {t:'evening', q:'O Lord, if I worship You for fear of Hell, burn me in it; and if I worship You in hope of Paradise, exclude me from it. But if I worship You for Your own sake, do not withhold from me Your eternal beauty.', s:'Rabia al-Adawiyya — do the work for the work'},
+  {t:'any', q:'Whoever travels a path in search of knowledge, Allah makes easy for him a path to Paradise.', s:'Hadith, Sahih Muslim 2699'},
+];
+function openReflect(){
+  const h = new Date().getHours();
+  const slot = h < 11 ? 'morning' : h < 18 ? 'day' : 'evening';
+  const pool = REFLECTIONS.filter(r=>r.t===slot || r.t==='any');
+  const r = pool[Math.floor(Math.random()*pool.length)];
+  document.getElementById('reflectTime').textContent = slot==='morning' ? 'Morning — intention' : slot==='day' ? 'Midday — excellence' : 'Evening — accounting';
+  document.getElementById('reflectText').textContent = '“'+r.q+'”';
+  document.getElementById('reflectSrc').textContent = '— '+r.s;
+  document.getElementById('reflectBox').style.display='block';
+}
+function closeReflect(e){ if(e.target.id==='reflectBox') document.getElementById('reflectBox').style.display='none'; }
+
+function renderTrips(){
+  state.trips = state.trips || [];
+  const upcoming = state.trips.filter(t=>t.date >= dateStr()).sort((a,b)=>a.date<b.date?-1:1);
+  const tile = document.getElementById('tripDays');
+  if(upcoming.length){
+    const t = upcoming[0];
+    const days = Math.ceil((new Date(t.date+'T12:00:00') - new Date(dateStr()+'T12:00:00'))/86400000);
+    const blocks = t.hours ? Math.max(1, Math.floor(t.hours/1.75)) : 0;
+    document.getElementById('tripLabel').textContent = 'Next trip · '+t.dest;
+    tile.textContent = days;
+    document.getElementById('tripNote').textContent = 'days to go' + (t.hours ? ' · '+t.hours+'h flight = '+blocks+' offline deep block'+(blocks>1?'s':'') : '');
+  } else {
+    document.getElementById('tripLabel').textContent = 'Next trip';
+    tile.textContent = '—';
+    document.getElementById('tripNote').textContent = 'add your trip in the Data tab';
+  }
+  const list = document.getElementById('tripList');
+  if(list) list.innerHTML = state.trips.length ? state.trips.map((t,i)=>
+    `<div class="rule" style="display:flex; align-items:center; gap:8px"><b style="display:inline">${t.dest}</b><span style="display:inline">${t.date}${t.hours?' · '+t.hours+'h':''}</span><button class="btn" style="margin-left:auto; padding:3px 10px; font-size:11px" onclick="delTrip(${i})">remove</button></div>`).join('')
+    : 'No trips yet.';
+}
+function addTrip(){
+  const dest = document.getElementById('tripDest').value.trim();
+  const date = document.getElementById('tripDate').value.trim();
+  const hours = parseFloat(document.getElementById('tripHours').value) || 0;
+  if(!dest || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  state.trips = state.trips || [];
+  state.trips.push({dest, date, hours});
+  document.getElementById('tripDest').value=''; document.getElementById('tripDate').value=''; document.getElementById('tripHours').value='';
+  save(); renderTrips();
+  if(ghToken() && navigator.onLine) syncNow();
+}
+function delTrip(i){ state.trips.splice(i,1); save(); renderTrips(); }
+
+// ---------- Blocks: Shovel-style timeboxing ----------
+const DAY_TEMPLATE = {
+  weekday: [
+    {s:'06:50', m:30,  label:'Spanish sprint', key:'esp'},
+    {s:'09:00', m:90,  label:'PDI Deep Block 1', key:'pdi'},
+    {s:'12:30', m:30,  label:'Passive immersion (lunch)', key:'esp'},
+    {s:'14:00', m:90,  label:'PDI Deep Block 2', key:'pdi'},
+    {s:'20:00', m:75,  label:'Foundations block', key:'fnd'},
+    {s:'21:15', m:30,  label:'Wildcard / teach', key:'wld'},
+    {s:'21:45', m:15,  label:'Score the day', key:'pdi'},
+  ],
+  sat: [
+    {s:'06:50', m:30,  label:'Spanish sprint', key:'esp'},
+    {s:'10:00', m:120, label:'Foundations project block', key:'fnd'},
+    {s:'15:00', m:60,  label:'Live speaking #1', key:'esp'},
+    {s:'21:45', m:15,  label:'Score the day', key:'pdi'},
+  ],
+  sun: [
+    {s:'06:50', m:30,  label:'Spanish sprint', key:'esp'},
+    {s:'10:00', m:120, label:'Wildcard long block', key:'wld'},
+    {s:'15:00', m:60,  label:'Live speaking #2', key:'esp'},
+    {s:'20:00', m:30,  label:'WEEKLY REVIEW', key:'pdi'},
+    {s:'21:45', m:15,  label:'Score the day', key:'pdi'},
+  ],
+};
+function toMin(hhmm){ const [h,m]=hhmm.split(':').map(Number); return h*60+m; }
+function toHHMM(min){ return String(Math.floor(min/60)).padStart(2,'0')+':'+String(min%60).padStart(2,'0'); }
+function blocksFor(d){
+  state.blocks = state.blocks || {};
+  if(!state.blocks[d]){
+    const dow = new Date(d+'T12:00:00').getDay();
+    const tpl = dow===6 ? 'sat' : dow===0 ? 'sun' : 'weekday';
+    state.blocks[d] = DAY_TEMPLATE[tpl].map(b=>({s:b.s, m:b.m, label:b.label, key:b.key}));
+  }
+  return state.blocks[d];
+}
+const DAY_START = 6*60+30, DAY_END = 21*60+45; // planning window 06:30 → 21:45
+function pockets(d){
+  const blocks = blocksFor(d).slice().sort((a,b)=>toMin(a.s)-toMin(b.s));
+  const isToday = d === dateStr();
+  const now = new Date();
+  let cursor = Math.max(DAY_START, isToday ? now.getHours()*60+now.getMinutes() : DAY_START);
+  const free = [];
+  blocks.forEach(b=>{
+    const bs = toMin(b.s), be = bs + b.m;
+    if(bs > cursor) free.push({s:cursor, e:bs});
+    cursor = Math.max(cursor, be);
+  });
+  if(cursor < DAY_END) free.push({s:cursor, e:DAY_END});
+  return free.filter(p=>p.e-p.s >= 15);
+}
+function renderBlocks(){
+  const tl = document.getElementById('timeline');
+  if(!tl) return;
+  const d = dateStr();
+  const blocks = blocksFor(d).slice().sort((a,b)=>toMin(a.s)-toMin(b.s));
+  const free = pockets(d);
+  const items = [
+    ...blocks.map((b,i)=>({s:toMin(b.s), e:toMin(b.s)+b.m, label:b.label, key:b.key, idx:i, type:'block'})),
+    ...free.map(p=>({s:p.s, e:p.e, label:'free pocket · '+(p.e-p.s)+' min', type:'free'}))
+  ].sort((a,b)=>a.s-b.s);
+  const nowM = new Date().getHours()*60 + new Date().getMinutes();
+  tl.innerHTML = items.map(it=>{
+    const h = Math.max(30, (it.e-it.s)*0.85);
+    const past = it.e <= nowM;
+    if(it.type==='free')
+      return `<div style="display:flex; gap:10px; margin:3px 0; opacity:${past?.45:1}"><div style="width:88px; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; padding-top:4px">${toHHMM(it.s)}–${toHHMM(it.e)}</div><div style="flex:1; min-height:${h*0.6}px; border:1.5px dashed var(--baseline); border-radius:8px; display:flex; align-items:center; padding:4px 12px; font-size:12px; color:var(--muted)">${it.label}</div></div>`;
+    return `<div style="display:flex; gap:10px; margin:3px 0; opacity:${past?.45:1}"><div style="width:88px; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; padding-top:4px">${toHHMM(it.s)}–${toHHMM(it.e)}</div><div onclick="delBlock(${it.idx})" title="tap to remove" style="flex:1; min-height:${h*0.6}px; cursor:pointer; background:var(--${it.key}-track); border-left:3px solid var(--${it.key}); border-radius:8px; display:flex; align-items:center; padding:4px 12px; font-size:13px; font-weight:600">${it.label}</div></div>`;
+  }).join('');
+  // cushion math
+  const freeMin = free.reduce((a,p)=>a+(p.e-p.s),0);
+  state.tasks = state.tasks || [];
+  const needMin = state.tasks.filter(t=>!t.done).reduce((a,t)=>a+t.mins,0);
+  const fH = Math.floor(freeMin/60), fM = freeMin%60;
+  document.getElementById('freeTime').textContent = fH+'h '+String(fM).padStart(2,'0');
+  document.getElementById('needTime').textContent = Math.floor(needMin/60)+'h '+String(needMin%60).padStart(2,'0');
+  const cush = freeMin - needMin;
+  const cEl = document.getElementById('cushion'), cN = document.getElementById('cushionNote');
+  if(needMin===0){ cEl.textContent='—'; cN.textContent='add tasks with estimates'; }
+  else if(cush >= needMin*0.25){ cEl.textContent='✓ '+Math.floor(cush/60)+'h '+(cush%60)+'m spare'; cEl.style.color='var(--goodtext)'; cN.textContent='comfortable — start anyway'; }
+  else if(cush >= 0){ cEl.textContent='⚠ '+cush+' min spare'; cEl.style.color='var(--fnd)'; cN.textContent='tight — start the biggest task NOW'; }
+  else { cEl.textContent='✗ '+Math.abs(cush)+' min short'; cEl.style.color='var(--esp)'; cN.textContent='not enough day left — cut scope or move a task to tomorrow'; }
+  renderTasks();
+}
+function renderTasks(){
+  const el = document.getElementById('taskList');
+  if(!el) return;
+  state.tasks = state.tasks || [];
+  el.innerHTML = state.tasks.length ? state.tasks.map((t,i)=>
+    `<label class="check${t.done?' done':''}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${i})"><div><div class="t">${t.name}</div></div><div class="pts">${t.mins}m <span onclick="event.preventDefault(); delTask(${i})" style="cursor:pointer; color:var(--muted)">✕</span></div></label>`).join('')
+    : '<p class="hint">No tasks yet.</p>';
+}
+function addTask(){
+  const name = document.getElementById('taskName').value.trim();
+  const mins = parseInt(document.getElementById('taskMins').value,10);
+  if(!name || !mins) return;
+  state.tasks = state.tasks || [];
+  state.tasks.push({name, mins, done:false});
+  document.getElementById('taskName').value=''; document.getElementById('taskMins').value='';
+  save(); renderBlocks();
+}
+function toggleTask(i){ state.tasks[i].done = !state.tasks[i].done; save(); renderBlocks(); }
+function delTask(i){ state.tasks.splice(i,1); save(); renderBlocks(); }
+function addBlock(){
+  const label = document.getElementById('blkLabel').value.trim();
+  const s = document.getElementById('blkStart').value.trim();
+  const m = parseInt(document.getElementById('blkMins').value,10);
+  if(!label || !/^\d{1,2}:\d{2}$/.test(s) || !m) return;
+  blocksFor(dateStr()).push({s, m, label, key:'wld'});
+  document.getElementById('blkLabel').value=''; document.getElementById('blkStart').value=''; document.getElementById('blkMins').value='';
+  save(); renderBlocks();
+}
+function delBlock(i){ blocksFor(dateStr()).splice(i,1); save(); renderBlocks(); }
+setInterval(renderBlocks, 60000);
 
 // ---------- tabs & init ----------
 document.querySelectorAll('nav button').forEach(b=>{
@@ -817,6 +1116,10 @@ viewDate = dateStr();
 today = bufferFor(viewDate);
 renderFoundations();
 renderChallenge();
+tickClock();
+dailyQuote();
+renderTrips();
+renderBlocks();
 refresh();
 // offline support
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
