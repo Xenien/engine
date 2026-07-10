@@ -18,6 +18,7 @@
     --fnd:#eda100; --fnd-track:#fbe8bd;
     --wld:#008300; --wld-track:#cdeacd;
     --soc:#4a3aa7; --soc-track:#ddd9f4;
+    --now:#d03b3b;
     --good:#0ca30c; --warn:#fab219; --goodtext:#006300;
   }
   @media (prefers-color-scheme: dark){
@@ -29,6 +30,7 @@
       --fnd:#c98500; --fnd-track:#3d2f0e;
       --wld:#008300; --wld-track:#123512;
       --soc:#9085e9; --soc-track:#2a2650;
+      --now:#e66767;
       --good:#0ca30c; --goodtext:#0ca30c;
     }
   }
@@ -97,7 +99,8 @@
   .rz{position:absolute; left:0; right:14px; height:9px; cursor:ns-resize; touch-action:none}
   .rz-t{top:-3px} .rz-b{bottom:-3px}
   .calfree{position:absolute; left:34px; right:4px; border:1.5px dashed var(--baseline); border-radius:7px; font-size:10px; color:var(--muted); padding:1px 8px}
-  .nowline{position:absolute; left:0; right:0; border-top:2px solid var(--esp); z-index:4}
+  .nowline{position:absolute; left:0; right:0; border-top:2.5px solid var(--now); z-index:4}
+  .nowtag{position:absolute; left:2px; top:-9px; background:var(--now); color:#fff; font-size:9px; font-weight:800; padding:1px 7px; border-radius:99px; letter-spacing:.03em}
   .salahline{position:absolute; left:0; right:0; border-top:1px dotted var(--fnd); font-size:9px; color:var(--fnd); text-align:right; padding-right:2px; pointer-events:none; z-index:3}
   /* playbook */
   .rule{padding:10px 0; border-bottom:1px solid var(--grid)}
@@ -1231,7 +1234,7 @@ function pockets(d){
   if(cursor < DAY_END) free.push({s:cursor, e:DAY_END});
   return free.filter(p=>p.e-p.s >= 15);
 }
-const CAL_START = 6*60, CAL_END = 23*60, K = 0.8; // px per minute
+const CAL_START = 5*60+30, CAL_END = 23*60, K = 0.8; // 05:30 start so Fajr is on the grid
 function renderBlocks(){
   const cal = document.getElementById('calBody');
   if(!cal) return;
@@ -1239,7 +1242,7 @@ function renderBlocks(){
   const blocks = blocksFor(d);
   const free = pockets(d);
   document.getElementById('calDateLine').textContent =
-    new Date(d+'T12:00:00').toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + ' · 06:00 → 23:00';
+    new Date(d+'T12:00:00').toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + ' · 05:30 → 23:00';
   cal.style.height = (CAL_END-CAL_START)*K + 'px';
   let html = '';
   for(let h=6; h<=22; h++) html += `<div class="calhr" style="top:${(h*60-CAL_START)*K}px">${String(h).padStart(2,'0')}:00</div>`;
@@ -1251,7 +1254,7 @@ function renderBlocks(){
     html += `<div class="calblk" data-i="${i}" style="top:${top}px; height:${hh}px; background:var(--${b.key||'wld'}-track); border-left-color:var(--${b.key||'wld'})"><span class="rz rz-t"></span><span class="bx" data-i="${i}">✕</span>${b.s} ${b.label}<span class="rz rz-b"></span></div>`;
   });
   const nowM = new Date().getHours()*60 + new Date().getMinutes();
-  if(nowM >= CAL_START && nowM <= CAL_END) html += `<div class="nowline" style="top:${(nowM-CAL_START)*K}px"></div>`;
+  if(nowM >= CAL_START && nowM <= CAL_END) html += `<div class="nowline" style="top:${(nowM-CAL_START)*K}px"><span class="nowtag">NOW ${toHHMM(nowM)}</span></div>`;
   html += salahMarkers();
   cal.innerHTML = html;
   cal.querySelectorAll('.calblk').forEach(el=>attachDrag(el));
