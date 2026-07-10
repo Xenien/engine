@@ -375,6 +375,7 @@
       <div class="rule"><b>6 · Decide once, on Sunday.</b><span>Low industriousness dies by a thousand daily decisions. The Sunday review (30 min) sets the week's 3 targets, books the speaking sessions, and picks the wildcard — weekdays just execute the default week.</span></div>
       <div class="rule"><b>7 · Environment beats intention.</b><span>Phone out of the room for the morning sprint. Spanish app on the home screen; feeds off it. Foundations materials open on the desk before bed. Make the right thing the lazy thing.</span></div>
       <div class="rule"><b>8 · The Witness Rule — the audit's verdict.</b><span>Six years of your own records say one thing: capture survives, closure dies — unless a human is attached. Every system you kept had people in it; every solo system died in about three weeks. So nothing here counts as a commitment until it has a witness and a date. The nightly check-in is the witness of last resort: answering it IS the closure step.</span></div>
+      <div class="rule"><b>9 · The Spurt Rule.</b><span>The night flow state is real and welcome — after the 21:45 bell, work earns base points, no guilt about the hour. But the spurt rides the EXISTING task list, never a new idea (new ideas go to capture and audition on Saturday — spurts that finish things are a gift; spurts that start things staff the graveyard). And the spurt never costs tomorrow's 06:50: protect the sleep floor, take a floor-only day after a late night if needed.</span></div>
     </div>
 
     <div class="card">
@@ -386,7 +387,7 @@
         <tr><td>Spanish full session (30+ min)</td><td style="text-align:right">15 <span class="hint">(20 before 09:30)</span></td></tr>
         <tr><td>Foundations evening block</td><td style="text-align:right">20 <span class="hint">(25 from 19:00)</span></td></tr>
         <tr><td>Wildcard session</td><td style="text-align:right">10</td></tr>
-        <tr><td>Social bonus — any session with / taught to / reported to a human</td><td style="text-align:right">+10</td></tr>
+        <tr><td>Social context — real time with humans today (meal, group, friends)</td><td style="text-align:right">+10</td></tr>
         <tr><td>Comeback bonus — first day back after a miss</td><td style="text-align:right">+15</td></tr>
       </table>
       <p class="hint" style="margin-top:8px">Right-slot rule: the bonus is for doing the thing in its designed window — never for delaying it. Bonuses need a live checkbox tick (backfilled days score base) and all bonuses die at the 21:45 bell. Max perfectly-slotted day = 191. Gold at 950 ≈ six strong days.</p>
@@ -466,7 +467,7 @@ const SESSIONS = [
   {id:'esp1', t:'Spanish full session', d:'30+ min sprint or live speaking · morning-slot bonus before 09:30', pts:15, key:'esp'},
   {id:'fnd1', t:'Foundations block', d:'75 min lesson + habit rep · evening-slot bonus 19:00–21:45', pts:20, key:'fnd'},
   {id:'wld1', t:'Wildcard session', d:'Your current new thing — sanctioned novelty', pts:10, key:'wld'},
-  {id:'soc1', t:'Social bonus', d:'Any session done with / taught to / reported to a human', pts:10, key:'soc'},
+  {id:'soc1', t:'Social context', d:'Real time with humans today — a meal, the group, friends for hours. Once per day.', pts:10, key:'soc'},
 ];
 // right-slot bonuses: extra points for doing the thing in its DESIGNED window.
 // Bonuses need a timestamp (checked live, not backfilled) and die at the 21:45 cutoff.
