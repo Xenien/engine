@@ -120,6 +120,8 @@
   .proprow{display:flex; gap:6px; align-items:center; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--grid)}
   .proprow input[type=text]{flex:1; min-width:120px}
   .proprow input{font:12.5px inherit; padding:6px; border:1px solid var(--grid); border-radius:7px; background:var(--page); color:var(--ink)}
+  .spin{width:30px; height:30px; margin:4px auto 0; border:3px solid var(--grid); border-top-color:var(--pdi); border-radius:50%; animation:spin 0.9s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .salahline{position:absolute; left:0; right:0; border-top:1px dotted var(--fnd); font-size:9px; color:var(--fnd); text-align:right; padding-right:2px; pointer-events:none; z-index:3}
   /* playbook */
   .rule{padding:10px 0; border-bottom:1px solid var(--grid)}
@@ -164,6 +166,16 @@
         <button class="btn primary" onclick="addSheetGo()">Add</button>
         <button class="btn" onclick="document.getElementById('addSheet').style.display='none'">Cancel</button>
       </div>
+    </div>
+  </div>
+
+  <!-- OCR progress (blocking, cancellable) -->
+  <div id="ocrBox" class="sheetov" style="display:none">
+    <div class="card sheet" style="text-align:center; max-width:340px">
+      <div class="spin"></div>
+      <p id="ocrMsg" style="margin-top:12px; font-weight:600; font-size:14px">—</p>
+      <div style="height:6px; background:var(--page); border:1px solid var(--grid); border-radius:3px; margin-top:12px; overflow:hidden"><span id="ocrPct" style="display:block; height:100%; width:0; background:var(--pdi); transition:width .3s"></span></div>
+      <div class="btnrow" style="justify-content:center; margin-top:16px"><button class="btn" onclick="cancelOcr()">Cancel</button></div>
     </div>
   </div>
 
@@ -515,6 +527,17 @@
         <button class="btn primary" onclick="syncNow()">Sync now</button>
       </div>
       <div class="note" id="syncStatus">Sync not configured on this device yet.</div>
+    </div>
+
+    <div class="card">
+      <h2>Deploy updates</h2>
+      <p class="hint">When Claude sends a new index.html: save it, pick it here — this device commits it straight to the engine repo and the site redeploys. No GitHub website, no renaming, no drag-and-drop. Needs a one-time fine-grained token scoped ONLY to the engine repo (Contents: read &amp; write).</p>
+      <div class="btnrow" style="align-items:center">
+        <input type="password" id="depToken" placeholder="github_pat_… (engine only)" style="flex:1; min-width:170px; font:12px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <button class="btn" onclick="saveDepToken()">Save token</button>
+        <label class="btn primary" style="cursor:pointer">Deploy file…<input type="file" accept=".html" id="depFile" onchange="deployUpdate(event)" style="display:none"></label>
+      </div>
+      <div class="note" id="depStatus">No deploy token on this device yet.</div>
     </div>
 
     <div class="card">
@@ -1322,29 +1345,60 @@ function parseEventText(text){
   return { title, date: dstr, time: start!==null ? toHHMM(start) : '', mins };
 }
 let props = [];
+let tessWorker = null, ocrCancelled = false, ocrBaseMsg = '';
+function showOcr(msg){ ocrBaseMsg = msg; document.getElementById('ocrMsg').textContent = msg; document.getElementById('ocrPct').style.width='0%'; document.getElementById('ocrBox').style.display='block'; }
+function setOcrPct(p){ document.getElementById('ocrPct').style.width = p+'%'; document.getElementById('ocrMsg').textContent = ocrBaseMsg + (p>0 ? ' '+p+'%' : ''); }
+function hideOcr(){ document.getElementById('ocrBox').style.display='none'; }
+function cancelOcr(){
+  ocrCancelled = true;
+  if(tessWorker){ try{ tessWorker.terminate(); }catch(e){} tessWorker = null; }
+  hideOcr();
+}
+async function ensureWorker(){
+  await ensureTesseract();
+  if(tessWorker) return tessWorker;
+  tessWorker = await Tesseract.createWorker('eng', 1, {
+    logger: m => { if(m.status === 'recognizing text') setOcrPct(Math.round(m.progress*100)); }
+  });
+  return tessWorker;
+}
 async function onShots(e){
   const files = Array.from(e.target.files || []);
   if(!files.length) return;
-  const st = document.getElementById('ocrStatus');
-  st.style.display='block';
+  ocrCancelled = false;
+  showOcr('Preparing the reader (first time takes a moment)…');
   try{
-    st.textContent = 'Loading reader (first time only)…';
-    await ensureTesseract();
+    const worker = await ensureWorker();
     props = [];
-    for(let i=0;i<files.length;i++){
-      st.textContent = `Reading screenshot ${i+1} of ${files.length}…`;
+    for(let i=0; i<files.length && !ocrCancelled; i++){
+      ocrBaseMsg = `Reading screenshot ${i+1} of ${files.length} —`;
+      setOcrPct(0);
       const thumb = await fileToData(files[i], 460);
-      const big = await fileToData(files[i], 1400);
+      const big = await fileToData(files[i], 1100);
       let text = '';
-      try{ const r = await Tesseract.recognize(big, 'eng'); text = r.data.text || ''; }catch(err){}
+      try{
+        const r = await Promise.race([
+          worker.recognize(big),
+          new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), 45000))
+        ]);
+        text = (r && r.data && r.data.text) || '';
+      }catch(err){ /* one stuck image never blocks the batch */ }
+      if(ocrCancelled) break;
       const ev = parseEventText(text);
+      if(!text.trim()) ev.title = "(couldn't read — edit me)";
       props.push(Object.assign(ev, {img: thumb, include: true}));
     }
-    st.style.display='none';
-    renderProps();
-    document.getElementById('propBox').style.display='block';
+    hideOcr();
+    if(!ocrCancelled && props.length){
+      renderProps();
+      document.getElementById('propBox').style.display='block';
+    }
   }catch(err){
-    st.textContent = 'Could not read screenshots ('+err.message+') — add manually with ＋.';
+    hideOcr();
+    const st = document.getElementById('ocrStatus');
+    st.style.display='block';
+    st.textContent = 'Reader failed to load ('+err.message+') — add the event manually with ＋.';
+    setTimeout(()=>{ st.style.display='none'; }, 9000);
   }
   document.getElementById('capFile').value='';
 }
@@ -1747,6 +1801,45 @@ document.addEventListener('visibilitychange', ()=>{
   tickClock(); renderBlocks(); refresh();
   if(ghToken() && navigator.onLine) syncPull().then(()=>refresh()).catch(()=>{});
 });
+
+// ---------- in-app deployer: commit updates to the engine repo from THIS device ----------
+const DEP = { owner:'Xenien', repo:'engine', path:'index.html', key:'adamos-deploy' };
+function depToken(){ try{ return localStorage.getItem(DEP.key)||''; }catch(e){ return ''; } }
+function saveDepToken(){
+  const t = document.getElementById('depToken').value.trim();
+  if(!t){ depMsg('No token entered.'); return; }
+  try{ localStorage.setItem(DEP.key, t); }catch(e){}
+  document.getElementById('depToken').value='';
+  depMsg('Deploy token saved on this device. Ready — pick an update file any time.');
+}
+function depMsg(m){ const el=document.getElementById('depStatus'); if(el) el.textContent = m; }
+async function deployUpdate(e){
+  const f = e.target.files && e.target.files[0];
+  document.getElementById('depFile').value='';
+  if(!f) return;
+  if(!depToken()){ depMsg('Save a deploy token first (engine-only, Contents read/write).'); return; }
+  const text = await f.text();
+  if(!text.includes("Adam's Engine") || text.length < 40000){
+    depMsg('That does not look like a valid Adam OS build — deploy cancelled, nothing changed.');
+    return;
+  }
+  const url = `https://api.github.com/repos/${DEP.owner}/${DEP.repo}/contents/${DEP.path}`;
+  const hdrs = { 'Authorization':'Bearer '+depToken(), 'Accept':'application/vnd.github+json', 'X-GitHub-Api-Version':'2022-11-28' };
+  try{
+    depMsg('Deploying…');
+    let sha;
+    const g = await fetch(url, {headers:hdrs, cache:'no-store'});
+    if(g.ok) sha = (await g.json()).sha;
+    else if(g.status !== 404) throw new Error('read '+g.status);
+    const body = { message:'deploy from Adam OS '+new Date().toISOString().slice(0,16), content: btoa(unescape(encodeURIComponent(text))) };
+    if(sha) body.sha = sha;
+    const p = await fetch(url, {method:'PUT', headers:hdrs, body: JSON.stringify(body)});
+    if(!p.ok) throw new Error('write '+p.status);
+    depMsg('✓ Deployed. GitHub Pages rebuilds in ~1 minute — then hard-refresh (or double-kill the app) to load the new version.');
+  }catch(err){
+    depMsg('Deploy failed ('+err.message+'). Nothing changed. Check the token covers the engine repo with Contents read/write.');
+  }
+}
 
 // ---------- tabs & init ----------
 function updateSplit(activeTab){
