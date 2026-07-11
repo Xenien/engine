@@ -40,10 +40,11 @@
   header{padding:26px 0 10px}
   header h1{font-size:26px; letter-spacing:-.02em}
   header .sub{color:var(--ink2); font-size:14px; margin-top:2px}
-  nav{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:18px 0 20px; border-bottom:1px solid var(--grid); padding-bottom:0}
-  nav button{background:none; border:none; font:inherit; font-size:14px; font-weight:600; color:var(--muted); padding:9px 14px; cursor:pointer; border-bottom:2px solid transparent}
-  nav button.active{color:var(--ink); border-bottom-color:var(--pdi)}
-  nav button.primary-tab{font-size:16px; font-weight:800}
+  nav{display:inline-flex; gap:2px; flex-wrap:wrap; align-items:center; margin:18px 0 20px; background:var(--surface); border:1px solid var(--border); border-radius:999px; padding:4px; max-width:100%}
+  nav button{background:none; border:none; font:inherit; font-size:13.5px; font-weight:600; color:var(--muted); padding:8px 15px; cursor:pointer; border-radius:999px; transition:background .18s, color .18s}
+  nav button.active{color:#fff; background:var(--pdi)}
+  nav button.primary-tab{font-size:14.5px; font-weight:700}
+  .btn{border-radius:999px}
   #moreMenu button{font-size:12.5px; padding:7px 10px}
   /* desktop split: Today + Timeblock side by side */
   @media(min-width:1100px){
@@ -53,12 +54,12 @@
   }
   .tab{display:none}
   .tab.active{display:block}
-  .card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:14px}
+  .card{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:18px; margin-bottom:14px; box-shadow:0 1px 2px rgba(0,0,0,.04)}
   .card h2{font-size:15px; font-weight:700; margin-bottom:10px}
   .card h3{font-size:13px; font-weight:700; margin:14px 0 6px}
   .hint{color:var(--muted); font-size:12.5px}
   .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:14px}
-  .tile{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px}
+  .tile{background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:14px 16px; box-shadow:0 1px 2px rgba(0,0,0,.04)}
   .tile .label{font-size:12.5px; color:var(--ink2)}
   .tile .value{font-size:30px; font-weight:600; margin-top:2px}
   .tile .delta{font-size:12.5px; margin-top:2px; color:var(--ink2)}
@@ -107,17 +108,10 @@
   .calblk .bx{position:absolute; top:1px; right:5px; cursor:pointer; font-weight:700; opacity:.6}
   .rz{position:absolute; left:0; right:14px; height:9px; cursor:ns-resize; touch-action:none}
   .rz-t{top:-3px} .rz-b{bottom:-3px}
-  /* Clippy-era reflect button */
-  #reflectBtn{font-family:"Comic Sans MS","Chalkboard SE","Segoe UI",cursive; font-size:13px; font-weight:700;
-    background:linear-gradient(180deg,#fff3c4 0%,#ffd24d 45%,#ff9d1a 100%); color:#5b3600;
-    border:2px outset #ffe08a; border-radius:10px; padding:8px 15px; cursor:pointer;
-    box-shadow:2px 2px 0 #a8620a, 0 0 14px rgba(255,170,30,.5); animation:clippywiggle 5s infinite; position:relative}
-  #reflectBtn:active{border-style:inset; transform:translate(1px,1px)}
-  @keyframes clippywiggle{0%,86%,100%{transform:rotate(0)}88%{transform:rotate(-5deg) scale(1.07)}91%{transform:rotate(4deg)}94%{transform:rotate(-2deg) scale(1.03)}97%{transform:rotate(0)}}
-  #clippyBubble{position:fixed; right:16px; bottom:18px; z-index:60; max-width:250px; background:#fffceb; color:#333;
-    border:2px solid #a8a15c; border-radius:12px; padding:12px 14px; font-family:"Comic Sans MS","Chalkboard SE",cursive;
-    font-size:12.5px; box-shadow:4px 4px 0 rgba(0,0,0,.25); cursor:pointer; display:none}
-  #clippyBubble::after{content:""; position:absolute; bottom:-10px; right:28px; border:10px solid transparent; border-top-color:#a8a15c; border-bottom:none}
+  /* quiet reflect button */
+  #reflectBtn{font:500 13px inherit; letter-spacing:.01em; background:var(--surface); color:var(--ink2);
+    border:1px solid var(--border); border-radius:999px; padding:8px 16px; cursor:pointer; transition:background .2s, color .2s}
+  #reflectBtn:hover{color:var(--ink); background:var(--page)}
   .calfree{position:absolute; left:34px; right:4px; border:1.5px dashed var(--baseline); border-radius:7px; font-size:10px; color:var(--muted); padding:1px 8px}
   .nowline{position:absolute; left:0; right:0; border-top:2.5px solid var(--now); z-index:4}
   .nowtag{position:absolute; left:2px; top:-9px; background:var(--now); color:#fff; font-size:9px; font-weight:800; padding:1px 7px; border-radius:99px; letter-spacing:.03em}
@@ -146,14 +140,12 @@
   <header>
     <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap">
       <h1>Adam's Engine</h1>
-      <button id="reflectBtn" onclick="openReflect()">📎✨ Feeling reflective?</button>
+      <button id="reflectBtn" onclick="openReflect()">☾ Reflect</button>
     </div>
     <div class="sub" id="todayline">—</div>
     <div class="sub" id="clockline" style="font-variant-numeric:tabular-nums">—</div>
     <div class="sub" id="quoteline" style="margin-top:8px; font-style:italic; font-size:13px">—</div>
   </header>
-
-  <div id="clippyBubble" onclick="openReflect(); this.style.display='none'">📎 <b>It looks like you're trying to have a disciplined day!</b><br>Would you like a reflection with that?</div>
 
   <!-- + Add sheet -->
   <div id="addSheet" class="sheetov" style="display:none" onclick="if(event.target===this)this.style.display='none'">
@@ -1180,20 +1172,6 @@ function openReflect(){
   document.getElementById('reflectBox').style.display='block';
 }
 function closeReflect(e){ if(e.target.id==='reflectBox') document.getElementById('reflectBox').style.display='none'; }
-// Clippy lives: proactive bubble, once per app-open, 25s in, auto-dismisses
-const CLIPPY_LINES = [
-  '📎 <b>It looks like you\'re trying to have a disciplined day!</b><br>Would you like a reflection with that?',
-  '📎 <b>Hi! I noticed you\'re working hard.</b><br>The scholars left you a note. Want to read it?',
-  '📎 <b>You\'ve been scrolling for a while!</b><br>One ayah is shorter than one reel. Just saying.',
-  '📎 <b>Reminder from the 1400s:</b><br>your nafs would love a word with you.',
-];
-setTimeout(()=>{
-  const el = document.getElementById('clippyBubble');
-  if(!el || document.getElementById('reflectBox').style.display==='block') return;
-  el.innerHTML = CLIPPY_LINES[Math.floor(Math.random()*CLIPPY_LINES.length)];
-  el.style.display='block';
-  setTimeout(()=>{ el.style.display='none'; }, 12000);
-}, 25000);
 
 function renderTrips(){
   state.trips = state.trips || [];
@@ -1607,7 +1585,7 @@ function pockets(d){
   if(cursor < DAY_END) free.push({s:cursor, e:DAY_END});
   return free.filter(p=>p.e-p.s >= 15);
 }
-const CAL_START = 5*60+30, CAL_END = 23*60, K = 1.15; // 05:30 start so Fajr is on the grid; K = px/min
+const CAL_START = 0, CAL_END = 24*60, K = 1.15; // full 24-hour grid; K = px/min
 let calAutoScroll = true;
 let calDate = null; // set at init; the day the calendar is showing
 function calNav(delta){
@@ -1631,7 +1609,7 @@ function renderBlocks(){
   document.getElementById('calTodayBtn').style.display = isTodayView ? 'none' : 'inline-block';
   cal.style.height = (CAL_END-CAL_START)*K + 'px';
   let html = '';
-  for(let h=6; h<=22; h++) html += `<div class="calhr" style="top:${(h*60-CAL_START)*K}px">${String(h).padStart(2,'0')}:00</div>`;
+  for(let h=0; h<=23; h++) html += `<div class="calhr" style="top:${(h*60-CAL_START)*K}px">${String(h).padStart(2,'0')}:00</div>`;
   free.forEach(p=>{
     html += `<div class="calfree" style="top:${(p.s-CAL_START)*K}px; height:${(p.e-p.s)*K-2}px">free · ${p.e-p.s}m</div>`;
   });
@@ -1853,11 +1831,11 @@ renderChallenge();
 tickClock();
 dailyQuote();
 renderTrips();
+updateSplit('today');
 renderBlocks();
 renderCapture();
 renderCommitments();
 loadDebrief();
-updateSplit('today');
 refresh();
 // deep link: xenien.github.io/engine/#debrief jumps straight to the daily debrief form
 if(location.hash === '#debrief'){
