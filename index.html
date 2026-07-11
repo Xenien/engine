@@ -309,7 +309,12 @@
             <button class="btn" style="font-size:11.5px; padding:5px 10px" onclick="resetDayBlocks()">Reset to default</button>
           </span>
         </div>
-        <p class="hint" id="calDateLine" style="margin:4px 0 10px">—</p>
+        <div style="display:flex; align-items:center; gap:8px; margin:6px 0 10px">
+          <button class="btn" style="padding:4px 11px" onclick="calNav(-1)">‹</button>
+          <p class="hint" id="calDateLine" style="margin:0; flex:1; text-align:center">—</p>
+          <button class="btn" style="padding:4px 11px" onclick="calNav(1)">›</button>
+          <button class="btn" id="calTodayBtn" style="font-size:11px; padding:4px 9px; display:none" onclick="calGoToday()">today</button>
+        </div>
         <div id="calWrap"><div id="calBody"></div></div>
         <p class="hint" style="margin-top:8px">Scroll the calendar — it opens centered on NOW. Drag a block to move it (snaps to 15 min). ✕ removes it. Dashed = free pockets.</p>
       </div>
@@ -637,6 +642,8 @@ function load(){
     // restore today's checkboxes only if it's still the same calendar day
     buffers[dateStr()] = (j.todayDate === dateStr()) ? (j.today||{}) : {};
     today = buffers[dateStr()];
+    // migration: screenshots are input, not storage — strip any lingering images
+    (state.capture||[]).forEach(c=>{ delete c.img; });
   }catch(e){}
 }
 function bufferFor(d){
@@ -1375,16 +1382,18 @@ function renderProps(){
     </div>`).join('');
 }
 function approveProps(){
-  state.capture = state.capture || [];
+  const added = [];
   props.filter(p=>p.include).forEach(p=>{
     let s = /^\d{1,2}:\d{2}$/.test(p.time) ? p.time : null;
     if(!s){ const free = pockets(p.date).filter(x=>x.e-x.s >= p.mins); s = free.length ? toHHMM(free[0].s) : '12:00'; }
     blocksFor(p.date).push({s, m: p.mins||60, label:'📌 '+p.title.slice(0,30), key:'wld', custom:true});
-    state.capture.push({text: p.title, date: dateStr(), img: p.img});
+    added.push(p.date+' '+s+' — '+p.title);
   });
-  pruneCaptureImages();
+  props = []; // images are input, not storage — gone the moment they're read
   document.getElementById('propBox').style.display='none';
-  save(); renderCapture(); renderBlocks(); renderCommitments();
+  const st = document.getElementById('ocrStatus');
+  if(added.length){ st.style.display='block'; st.textContent = '✓ On the calendar: '+added.join(' · '); setTimeout(()=>{ st.style.display='none'; }, 9000); }
+  save(); renderBlocks(); renderCommitments();
   if(ghToken() && navigator.onLine) syncNow();
 }
 function renderCapture(){
@@ -1392,7 +1401,7 @@ function renderCapture(){
   if(!el) return;
   state.capture = state.capture || [];
   el.innerHTML = state.capture.length ? state.capture.map((c,i)=>
-    `<div class="rule" style="display:flex; gap:8px; align-items:center"><span style="color:var(--muted); font-size:11px; white-space:nowrap">${c.date.slice(5)}</span>${c.img?`<img src="${c.img}" style="height:44px; border-radius:6px; cursor:pointer; border:1px solid var(--grid)" onclick="viewCapImg(${i})">`:''}<span style="flex:1">${c.text}</span><span style="cursor:pointer; color:var(--muted)" onclick="delCapture(${i})">✕</span></div>`).join('')
+    `<div class="rule" style="display:flex; gap:8px; align-items:center"><span style="color:var(--muted); font-size:11px; white-space:nowrap">${c.date.slice(5)}</span><span style="flex:1">${c.text}</span><span style="cursor:pointer; color:var(--muted)" onclick="delCapture(${i})">✕</span></div>`).join('')
     : '<p class="hint">Empty head, full list — that\'s the goal.</p>';
 }
 function viewCapImg(i){
@@ -1486,11 +1495,11 @@ function prayerTimes(lat, lng, d){
   });
   return out;
 }
-function salahMarkers(){
+function salahMarkers(forDate){
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
   const co = TZ_COORDS[tz];
   if(!co) return '';
-  const pt = prayerTimes(co[0], co[1], new Date());
+  const pt = prayerTimes(co[0], co[1], forDate || new Date());
   let html = '';
   Object.keys(pt).forEach(k=>{
     const m = pt[k];
@@ -1600,14 +1609,26 @@ function pockets(d){
 }
 const CAL_START = 5*60+30, CAL_END = 23*60, K = 1.15; // 05:30 start so Fajr is on the grid; K = px/min
 let calAutoScroll = true;
+let calDate = null; // set at init; the day the calendar is showing
+function calNav(delta){
+  const dt = new Date(calDate+'T12:00:00');
+  dt.setDate(dt.getDate()+delta);
+  calDate = dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  calAutoScroll = (calDate === dateStr());
+  renderBlocks();
+}
+function calGoToday(){ calDate = dateStr(); calAutoScroll = true; renderBlocks(); }
 function renderBlocks(){
   const cal = document.getElementById('calBody');
   if(!cal) return;
-  const d = dateStr();
+  if(!calDate) calDate = dateStr();
+  const d = calDate;
+  const isTodayView = d === dateStr();
   const blocks = blocksFor(d);
   const free = pockets(d);
   document.getElementById('calDateLine').textContent =
-    new Date(d+'T12:00:00').toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + ' · 05:30 → 23:00';
+    new Date(d+'T12:00:00').toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + (isTodayView ? ' — today' : '');
+  document.getElementById('calTodayBtn').style.display = isTodayView ? 'none' : 'inline-block';
   cal.style.height = (CAL_END-CAL_START)*K + 'px';
   let html = '';
   for(let h=6; h<=22; h++) html += `<div class="calhr" style="top:${(h*60-CAL_START)*K}px">${String(h).padStart(2,'0')}:00</div>`;
@@ -1619,13 +1640,13 @@ function renderBlocks(){
     html += `<div class="calblk" data-i="${i}" style="top:${top}px; height:${hh}px; background:var(--${b.key||'wld'}-track); border-left-color:var(--${b.key||'wld'})"><span class="rz rz-t"></span><span class="bx" data-i="${i}">✕</span>${b.s} ${b.label}<span class="rz rz-b"></span></div>`;
   });
   const nowM = new Date().getHours()*60 + new Date().getMinutes();
-  if(nowM >= CAL_START && nowM <= CAL_END) html += `<div class="nowline" style="top:${(nowM-CAL_START)*K}px"><span class="nowtag">NOW ${toHHMM(nowM)}</span></div>`;
-  html += salahMarkers();
+  if(isTodayView && nowM >= CAL_START && nowM <= CAL_END) html += `<div class="nowline" style="top:${(nowM-CAL_START)*K}px"><span class="nowtag">NOW ${toHHMM(nowM)}</span></div>`;
+  html += salahMarkers(new Date(d+'T12:00:00'));
   cal.innerHTML = html;
   cal.querySelectorAll('.calblk').forEach(el=>attachDrag(el));
   // center the viewport on NOW when the tab is opened (not on background re-renders)
   const wrap = document.getElementById('calWrap');
-  if(wrap && calAutoScroll && nowM >= CAL_START && nowM <= CAL_END){
+  if(wrap && calAutoScroll && isTodayView && nowM >= CAL_START && nowM <= CAL_END){
     wrap.scrollTop = Math.max(0, (nowM-CAL_START)*K - wrap.clientHeight/3);
     calAutoScroll = false;
   }
@@ -1702,7 +1723,7 @@ function attachDrag(el){
     dragging=false; el.style.zIndex=''; el.style.opacity=''; el.style.cursor='grab';
     if(moved){
       const i = parseInt(el.dataset.i,10);
-      const b = blocksFor(dateStr())[i];
+      const b = blocksFor(calDate)[i];
       if(b){
         if(mode==='move'){
           const mins = CAL_START + Math.round(parseFloat(el.style.top)/K/15)*15;
@@ -1723,19 +1744,19 @@ function attachDrag(el){
   });
   el.addEventListener('pointercancel', ()=>{ dragging=false; renderBlocks(); });
 }
-function delBlock(i){ blocksFor(dateStr()).splice(i,1); save(); renderBlocks(); }
+function delBlock(i){ blocksFor(calDate).splice(i,1); save(); renderBlocks(); renderCommitments(); }
 function delFuture(date, s){
   const arr = state.blocks[date]||[];
   const i = arr.findIndex(b=>b.s===s && b.custom);
   if(i>=0){ arr.splice(i,1); save(); renderBlocks(); }
 }
 function resetDayBlocks(){
-  delete state.blocks[dateStr()];
+  delete state.blocks[calDate];
   save(); renderBlocks(); renderCommitments();
 }
 function clearDayBlocks(){
   state.blocks = state.blocks || {};
-  state.blocks[dateStr()] = [];
+  state.blocks[calDate] = [];
   save(); renderBlocks(); renderCommitments();
 }
 setInterval(renderBlocks, 60000);
