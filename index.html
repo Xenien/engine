@@ -40,9 +40,17 @@
   header{padding:26px 0 10px}
   header h1{font-size:26px; letter-spacing:-.02em}
   header .sub{color:var(--ink2); font-size:14px; margin-top:2px}
-  nav{display:flex; gap:6px; flex-wrap:wrap; margin:18px 0 20px; border-bottom:1px solid var(--grid); padding-bottom:0}
+  nav{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:18px 0 20px; border-bottom:1px solid var(--grid); padding-bottom:0}
   nav button{background:none; border:none; font:inherit; font-size:14px; font-weight:600; color:var(--muted); padding:9px 14px; cursor:pointer; border-bottom:2px solid transparent}
   nav button.active{color:var(--ink); border-bottom-color:var(--pdi)}
+  nav button.primary-tab{font-size:16px; font-weight:800}
+  #moreMenu button{font-size:12.5px; padding:7px 10px}
+  /* desktop split: Today + Timeblock side by side */
+  @media(min-width:1100px){
+    .wrap{max-width:1500px}
+    body.split-on #split{display:grid; grid-template-columns:1fr 1.1fr; gap:18px; align-items:start}
+    body.split-on #split > .tab{display:block}
+  }
   .tab{display:none}
   .tab.active{display:block}
   .card{background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:18px; margin-bottom:14px}
@@ -155,15 +163,19 @@
   </div>
 
   <nav>
-    <button class="active" data-tab="today">Today</button>
-    <button data-tab="blocks">Timeblock</button>
-    <button data-tab="week">Week</button>
-    <button data-tab="history">History</button>
-    <button data-tab="foundations">Foundations</button>
-    <button data-tab="playbook">Playbook</button>
-    <button data-tab="data">Data</button>
+    <button class="active primary-tab" data-tab="today">Today</button>
+    <button class="primary-tab" data-tab="blocks">Timeblock</button>
+    <button id="moreBtn">More ▾</button>
+    <span id="moreMenu" style="display:none">
+      <button data-tab="week">Week</button>
+      <button data-tab="history">History</button>
+      <button data-tab="foundations">Foundations</button>
+      <button data-tab="playbook">Playbook</button>
+      <button data-tab="data">Data</button>
+    </span>
   </nav>
 
+  <div id="split">
   <!-- ============ TODAY ============ -->
   <section class="tab active" id="tab-today">
     <div class="card" style="padding:10px 14px; display:flex; align-items:center; gap:10px">
@@ -174,6 +186,7 @@
       </div>
       <button class="btn" onclick="navDay(1)" title="Next day" id="navFwd">›</button>
     </div>
+    <div class="card" id="nextUp" style="padding:9px 14px; font-size:13px; display:none"></div>
     <div class="tiles">
       <div class="tile hero" style="text-align:center">
         <div class="label" style="text-align:left">Points today</div>
@@ -209,13 +222,9 @@
     </div>
 
     <div class="card">
-      <h2>Capture — ideas exit your head here</h2>
-      <p class="hint">Any idea, any hour. Dump it, return to what you were doing. Captured ideas get their audition at Saturday's wildcard block and the Sunday review — never mid-week, never mid-spurt.</p>
-      <div class="btnrow" style="align-items:center">
-        <input id="capText" placeholder="The idea…" style="flex:1; min-width:180px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <button class="btn primary" onclick="addCapture()">Capture</button>
-      </div>
-      <div id="capList" style="margin-top:8px"></div>
+      <h2>Today's commitments</h2>
+      <p class="hint">Static mirror — booked commitments and captured ideas live here read-only. Manage them in Timeblock.</p>
+      <div id="commitToday" class="hint">Nothing booked yet today.</div>
     </div>
 
     <div class="card">
@@ -240,25 +249,35 @@
   <!-- ============ TIMEBLOCK (Shovel-style) ============ -->
   <section class="tab" id="tab-blocks">
     <div class="card">
-      <h2>Quick commitment — for when it's urgent</h2>
-      <p class="hint">Something just landed? Name it, say when, done. Works for 20 minutes from now or three months out — future ones appear on that day's calendar automatically.</p>
+      <h2>Capture &amp; commit — the living inbox</h2>
+      <p class="hint">Idea → capture it (auditions Saturday). Sudden commitment → give it a time, or hit auto-block and it grabs the next free pocket today. Screenshots welcome.</p>
       <div class="btnrow" style="align-items:center">
-        <input id="qcLabel" placeholder="What (e.g. call Azeem)" style="flex:1; min-width:130px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="capText" placeholder="Idea or commitment…" style="flex:1; min-width:150px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <label class="btn" style="cursor:pointer">📷<input type="file" accept="image/*" id="capFile" onchange="onCapFile(event)" style="display:none"></label>
+        <button class="btn primary" onclick="addCapture()">Capture idea</button>
+        <button class="btn" onclick="autoBlockCapture()">Auto-block 30m</button>
+      </div>
+      <img id="capPrev" style="display:none; max-height:70px; border-radius:8px; margin-top:6px; border:1px solid var(--grid)">
+      <div class="btnrow" style="align-items:center; margin-top:8px">
         <input id="qcDate" type="date" style="width:135px; font:13px inherit; padding:7px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
         <input id="qcTime" placeholder="14:00" style="width:66px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
         <input id="qcMins" placeholder="min" type="number" step="5" value="30" style="width:60px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
         <button class="btn" onclick="quickNow(15)">Now +15m</button>
         <button class="btn" onclick="quickNow(60)">In 1h</button>
-        <button class="btn primary" onclick="addQuick()">Commit</button>
+        <button class="btn primary" onclick="addQuick()">Commit to time</button>
       </div>
       <div id="upcomingList" class="hint" style="margin-top:8px"></div>
+      <div id="capList" style="margin-top:8px"></div>
     </div>
 
     <div class="tbwrap">
       <div class="card tbcal">
-        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap">
           <h2 style="margin:0">My timeblock calendar</h2>
-          <button class="btn" style="font-size:11.5px; padding:5px 10px" onclick="resetDayBlocks()">Reset to default</button>
+          <span>
+            <button class="btn" style="font-size:11.5px; padding:5px 10px" onclick="clearDayBlocks()">Clear day</button>
+            <button class="btn" style="font-size:11.5px; padding:5px 10px" onclick="resetDayBlocks()">Reset to default</button>
+          </span>
         </div>
         <p class="hint" id="calDateLine" style="margin:4px 0 10px">—</p>
         <div id="calWrap"><div id="calBody"></div></div>
@@ -284,6 +303,7 @@
       </div>
     </div>
   </section>
+  </div><!-- /split -->
 
   <!-- ============ WEEK ============ -->
   <section class="tab" id="tab-week">
@@ -1172,14 +1192,59 @@ function addTrip(){
 }
 function delTrip(i){ state.trips.splice(i,1); save(); renderTrips(); }
 
-// ---------- capture inbox ----------
-function addCapture(){
+// ---------- capture inbox (with images + auto-block) ----------
+let capImg = null;
+function onCapFile(e){
+  const f = e.target.files && e.target.files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const sc = Math.min(1, 460/Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      capImg = c.toDataURL('image/jpeg', 0.72);
+      const p = document.getElementById('capPrev');
+      p.src = capImg; p.style.display = 'block';
+    };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+}
+function pruneCaptureImages(){
+  // keep images only on the 12 newest captures — protects storage & sync payload
+  const withImg = (state.capture||[]).filter(c=>c.img);
+  if(withImg.length > 12) withImg.slice(0, withImg.length-12).forEach(c=>{ delete c.img; });
+}
+function pushCapture(){
   const t = document.getElementById('capText').value.trim();
-  if(!t) return;
+  if(!t && !capImg) return null;
   state.capture = state.capture || [];
-  state.capture.push({text:t, date:dateStr()});
+  const item = {text: t || '(screenshot)', date: dateStr()};
+  if(capImg) item.img = capImg;
+  state.capture.push(item);
+  pruneCaptureImages();
   document.getElementById('capText').value='';
-  save(); renderCapture();
+  capImg = null;
+  const p = document.getElementById('capPrev'); p.style.display='none'; p.src='';
+  document.getElementById('capFile').value='';
+  return item;
+}
+function addCapture(){
+  if(!pushCapture()) return;
+  save(); renderCapture(); renderCommitments();
+  if(ghToken() && navigator.onLine) syncNow();
+}
+function autoBlockCapture(){
+  const item = pushCapture();
+  if(!item) return;
+  const free = pockets(dateStr()).filter(p=>p.e-p.s >= 30);
+  if(free.length){
+    blocksFor(dateStr()).push({s: toHHMM(free[0].s), m:30, label:'📌 '+item.text.slice(0,26), key:'wld', custom:true});
+  }
+  save(); renderCapture(); renderBlocks(); renderCommitments();
   if(ghToken() && navigator.onLine) syncNow();
 }
 function renderCapture(){
@@ -1187,10 +1252,43 @@ function renderCapture(){
   if(!el) return;
   state.capture = state.capture || [];
   el.innerHTML = state.capture.length ? state.capture.map((c,i)=>
-    `<div class="rule" style="display:flex; gap:8px; align-items:baseline"><span style="color:var(--muted); font-size:11px; white-space:nowrap">${c.date.slice(5)}</span><span style="flex:1">${c.text}</span><span style="cursor:pointer; color:var(--muted)" onclick="delCapture(${i})">✕</span></div>`).join('')
+    `<div class="rule" style="display:flex; gap:8px; align-items:center"><span style="color:var(--muted); font-size:11px; white-space:nowrap">${c.date.slice(5)}</span>${c.img?`<img src="${c.img}" style="height:44px; border-radius:6px; cursor:pointer; border:1px solid var(--grid)" onclick="viewCapImg(${i})">`:''}<span style="flex:1">${c.text}</span><span style="cursor:pointer; color:var(--muted)" onclick="delCapture(${i})">✕</span></div>`).join('')
     : '<p class="hint">Empty head, full list — that\'s the goal.</p>';
 }
-function delCapture(i){ state.capture.splice(i,1); save(); renderCapture(); }
+function viewCapImg(i){
+  const c = state.capture[i];
+  if(!c || !c.img) return;
+  const box = document.getElementById('reflectBox');
+  document.getElementById('reflectTime').textContent = c.date+' — capture';
+  document.getElementById('reflectText').innerHTML = `<img src="${c.img}" style="max-width:100%; border-radius:10px">`;
+  document.getElementById('reflectSrc').textContent = c.text;
+  box.style.display='block';
+}
+function delCapture(i){ state.capture.splice(i,1); save(); renderCapture(); renderCommitments(); }
+
+// ---------- Today's static mirror: commitments + next up ----------
+function renderCommitments(){
+  const el = document.getElementById('commitToday');
+  if(!el) return;
+  const d = dateStr();
+  const customs = ((state.blocks||{})[d]||[]).filter(b=>b.custom).slice().sort((a,b)=>toMin(a.s)-toMin(b.s));
+  const caps = (state.capture||[]).slice(-5).reverse();
+  let html = '';
+  if(customs.length) html += customs.map(b=>`<div class="rule"><b style="display:inline">${b.s}</b> <span style="display:inline">${b.label} (${b.m}m)</span></div>`).join('');
+  if(caps.length) html += `<div class="hint" style="margin-top:6px">Captured: ${caps.map(c=>(c.img?'📎 ':'')+c.text).join(' · ')}</div>`;
+  el.innerHTML = html || 'Nothing booked yet today.';
+  // next-up strip
+  const strip = document.getElementById('nextUp');
+  if(strip){
+    const nowM = new Date().getHours()*60 + new Date().getMinutes();
+    const next = ((state.blocks||{})[d] ? state.blocks[d] : blocksFor(d)).slice().sort((a,b)=>toMin(a.s)-toMin(b.s)).find(b=>toMin(b.s) >= nowM);
+    if(next && viewingToday()){
+      const mins = toMin(next.s)-nowM;
+      strip.style.display='block';
+      strip.innerHTML = `<b>Next up:</b> ${next.s} ${next.label} <span style="color:var(--muted)">(in ${mins>=60 ? Math.floor(mins/60)+'h '+(mins%60)+'m' : mins+'m'})</span>`;
+    } else strip.style.display='none';
+  }
+}
 
 // ---------- daily debrief ----------
 function saveDebrief(){
@@ -1493,7 +1591,12 @@ function delFuture(date, s){
 }
 function resetDayBlocks(){
   delete state.blocks[dateStr()];
-  save(); renderBlocks();
+  save(); renderBlocks(); renderCommitments();
+}
+function clearDayBlocks(){
+  state.blocks = state.blocks || {};
+  state.blocks[dateStr()] = [];
+  save(); renderBlocks(); renderCommitments();
 }
 function quickNow(offsetMin){
   const t = new Date(Date.now() + offsetMin*60000);
@@ -1524,14 +1627,29 @@ document.addEventListener('visibilitychange', ()=>{
 });
 
 // ---------- tabs & init ----------
-document.querySelectorAll('nav button').forEach(b=>{
+function updateSplit(activeTab){
+  const wide = window.innerWidth >= 1100;
+  const isPrimary = activeTab==='today' || activeTab==='blocks';
+  document.body.classList.toggle('split-on', wide && isPrimary);
+}
+document.querySelectorAll('nav button[data-tab]').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById('tab-'+b.dataset.tab).classList.add('active');
-    if(b.dataset.tab==='blocks'){ calAutoScroll = true; renderBlocks(); }
+    updateSplit(b.dataset.tab);
+    document.getElementById('moreMenu').style.display='none';
+    if(b.dataset.tab==='blocks' || (document.body.classList.contains('split-on'))){ calAutoScroll = true; renderBlocks(); }
   });
+});
+document.getElementById('moreBtn').addEventListener('click', ()=>{
+  const m = document.getElementById('moreMenu');
+  m.style.display = m.style.display==='none' ? 'inline' : 'none';
+});
+window.addEventListener('resize', ()=>{
+  const active = document.querySelector('nav button.active');
+  updateSplit(active ? active.dataset.tab : 'today');
 });
 document.getElementById('todayline').textContent =
   new Date().toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'long', year:'numeric'}) +
@@ -1593,7 +1711,9 @@ dailyQuote();
 renderTrips();
 renderBlocks();
 renderCapture();
+renderCommitments();
 loadDebrief();
+updateSplit('today');
 refresh();
 // deep link: xenien.github.io/engine/#debrief jumps straight to the daily debrief form
 if(location.hash === '#debrief'){
