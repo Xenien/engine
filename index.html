@@ -92,6 +92,7 @@
   .tbcal{flex:0 0 320px}
   .tbmain{flex:1; min-width:0}
   @media(max-width:760px){ .tbwrap{flex-direction:column} .tbcal{flex:auto; width:100%} }
+  #calWrap{max-height:62vh; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:8px; border:1px solid var(--grid)}
   #calBody{position:relative; border-left:1px solid var(--grid)}
   .calhr{position:absolute; left:0; right:0; border-top:1px solid var(--grid); font-size:9.5px; color:var(--muted); padding-left:4px}
   .calblk{position:absolute; left:34px; right:4px; border-radius:7px; padding:2px 8px; font-size:11.5px; font-weight:600; overflow:hidden; touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; border-left:3px solid}
@@ -247,8 +248,8 @@
           <button class="btn" style="font-size:11.5px; padding:5px 10px" onclick="resetDayBlocks()">Reset to default</button>
         </div>
         <p class="hint" id="calDateLine" style="margin:4px 0 10px">—</p>
-        <div id="calBody"></div>
-        <p class="hint" style="margin-top:8px">Drag a block to move it (snaps to 15 min). ✕ removes it. Dashed = free pockets.</p>
+        <div id="calWrap"><div id="calBody"></div></div>
+        <p class="hint" style="margin-top:8px">Scroll the calendar — it opens centered on NOW. Drag a block to move it (snaps to 15 min). ✕ removes it. Dashed = free pockets.</p>
       </div>
 
       <div class="tbmain">
@@ -1234,7 +1235,8 @@ function pockets(d){
   if(cursor < DAY_END) free.push({s:cursor, e:DAY_END});
   return free.filter(p=>p.e-p.s >= 15);
 }
-const CAL_START = 5*60+30, CAL_END = 23*60, K = 0.8; // 05:30 start so Fajr is on the grid
+const CAL_START = 5*60+30, CAL_END = 23*60, K = 1.15; // 05:30 start so Fajr is on the grid; K = px/min
+let calAutoScroll = true;
 function renderBlocks(){
   const cal = document.getElementById('calBody');
   if(!cal) return;
@@ -1258,6 +1260,12 @@ function renderBlocks(){
   html += salahMarkers();
   cal.innerHTML = html;
   cal.querySelectorAll('.calblk').forEach(el=>attachDrag(el));
+  // center the viewport on NOW when the tab is opened (not on background re-renders)
+  const wrap = document.getElementById('calWrap');
+  if(wrap && calAutoScroll && nowM >= CAL_START && nowM <= CAL_END){
+    wrap.scrollTop = Math.max(0, (nowM-CAL_START)*K - wrap.clientHeight/3);
+    calAutoScroll = false;
+  }
   cal.querySelectorAll('.bx').forEach(x=>x.addEventListener('pointerdown', e=>{ e.stopPropagation(); delBlock(parseInt(x.dataset.i,10)); }));
   // upcoming commitments (future days)
   const up = [];
@@ -1397,6 +1405,7 @@ document.querySelectorAll('nav button').forEach(b=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById('tab-'+b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='blocks'){ calAutoScroll = true; renderBlocks(); }
   });
 });
 document.getElementById('todayline').textContent =
