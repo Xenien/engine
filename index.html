@@ -121,6 +121,11 @@
   .calfree{position:absolute; left:34px; right:4px; border:1.5px dashed var(--baseline); border-radius:7px; font-size:10px; color:var(--muted); padding:1px 8px}
   .nowline{position:absolute; left:0; right:0; border-top:2.5px solid var(--now); z-index:4}
   .nowtag{position:absolute; left:2px; top:-9px; background:var(--now); color:#fff; font-size:9px; font-weight:800; padding:1px 7px; border-radius:99px; letter-spacing:.03em}
+  .sheetov{position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:55; padding:20px; overflow-y:auto}
+  .sheet{max-width:460px; margin:10vh auto 0; padding:20px}
+  .proprow{display:flex; gap:6px; align-items:center; flex-wrap:wrap; padding:8px 0; border-bottom:1px solid var(--grid)}
+  .proprow input[type=text]{flex:1; min-width:120px}
+  .proprow input{font:12.5px inherit; padding:6px; border:1px solid var(--grid); border-radius:7px; background:var(--page); color:var(--ink)}
   .salahline{position:absolute; left:0; right:0; border-top:1px dotted var(--fnd); font-size:9px; color:var(--fnd); text-align:right; padding-right:2px; pointer-events:none; z-index:3}
   /* playbook */
   .rule{padding:10px 0; border-bottom:1px solid var(--grid)}
@@ -149,6 +154,39 @@
   </header>
 
   <div id="clippyBubble" onclick="openReflect(); this.style.display='none'">📎 <b>It looks like you're trying to have a disciplined day!</b><br>Would you like a reflection with that?</div>
+
+  <!-- + Add sheet -->
+  <div id="addSheet" class="sheetov" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <div class="card sheet">
+      <div class="btnrow" style="margin-bottom:10px">
+        <button class="btn" id="modeIdea" onclick="addMode('idea')">💡 Idea</button>
+        <button class="btn" id="modeCommit" onclick="addMode('commit')">🕐 Commitment</button>
+      </div>
+      <input id="asTitle" placeholder="What is it?" style="width:100%; font:14px inherit; padding:10px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+      <div id="asWhen" class="btnrow" style="align-items:center; margin-top:8px; display:none">
+        <input id="asDate" type="date" style="font:13px inherit; padding:7px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="asTime" placeholder="hh:mm (blank = next free pocket)" style="width:190px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+        <input id="asMins" type="number" step="5" value="30" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
+      </div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="btn primary" onclick="addSheetGo()">Add</button>
+        <button class="btn" onclick="document.getElementById('addSheet').style.display='none'">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- screenshot proposals sheet -->
+  <div id="propBox" class="sheetov" style="display:none">
+    <div class="card sheet" style="max-width:640px">
+      <h2>Read from your screenshots — approve or edit</h2>
+      <p class="hint">On-device OCR: check my reading before it lands. Untick anything wrong or fix it inline.</p>
+      <div id="propList" style="margin-top:10px"></div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="btn primary" onclick="approveProps()">Add selected to calendar</button>
+        <button class="btn" onclick="document.getElementById('propBox').style.display='none'">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <div id="reflectBox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50; padding:24px" onclick="closeReflect(event)">
     <div class="card" style="max-width:520px; margin:12vh auto 0; padding:24px" onclick="event.stopPropagation()">
@@ -249,23 +287,15 @@
   <!-- ============ TIMEBLOCK (Shovel-style) ============ -->
   <section class="tab" id="tab-blocks">
     <div class="card">
-      <h2>Capture &amp; commit — the living inbox</h2>
-      <p class="hint">Idea → capture it (auditions Saturday). Sudden commitment → give it a time, or hit auto-block and it grabs the next free pocket today. Screenshots welcome.</p>
-      <div class="btnrow" style="align-items:center">
-        <input id="capText" placeholder="Idea or commitment…" style="flex:1; min-width:150px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <label class="btn" style="cursor:pointer">📷<input type="file" accept="image/*" id="capFile" onchange="onCapFile(event)" style="display:none"></label>
-        <button class="btn primary" onclick="addCapture()">Capture idea</button>
-        <button class="btn" onclick="autoBlockCapture()">Auto-block 30m</button>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap">
+        <h2 style="margin:0">Capture &amp; commit</h2>
+        <span class="btnrow" style="margin:0">
+          <button class="btn primary" style="font-size:15px; font-weight:800" onclick="openAdd()">＋ Add</button>
+          <label class="btn" style="cursor:pointer">📷 Screenshots<input type="file" accept="image/*" multiple id="capFile" onchange="onShots(event)" style="display:none"></label>
+        </span>
       </div>
-      <img id="capPrev" style="display:none; max-height:70px; border-radius:8px; margin-top:6px; border:1px solid var(--grid)">
-      <div class="btnrow" style="align-items:center; margin-top:8px">
-        <input id="qcDate" type="date" style="width:135px; font:13px inherit; padding:7px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <input id="qcTime" placeholder="14:00" style="width:66px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <input id="qcMins" placeholder="min" type="number" step="5" value="30" style="width:60px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <button class="btn" onclick="quickNow(15)">Now +15m</button>
-        <button class="btn" onclick="quickNow(60)">In 1h</button>
-        <button class="btn primary" onclick="addQuick()">Commit to time</button>
-      </div>
+      <p class="hint" style="margin-top:6px">＋ for an idea or commitment. 📷 for one or more screenshots — I read them, extract the event and time, and you approve before anything lands on the calendar.</p>
+      <div id="ocrStatus" class="hint" style="display:none; margin-top:6px"></div>
       <div id="upcomingList" class="hint" style="margin-top:8px"></div>
       <div id="capList" style="margin-top:8px"></div>
     </div>
@@ -1192,58 +1222,168 @@ function addTrip(){
 }
 function delTrip(i){ state.trips.splice(i,1); save(); renderTrips(); }
 
-// ---------- capture inbox (with images + auto-block) ----------
-let capImg = null;
-function onCapFile(e){
-  const f = e.target.files && e.target.files[0];
-  if(!f) return;
-  const rd = new FileReader();
-  rd.onload = ()=>{
-    const img = new Image();
-    img.onload = ()=>{
-      const sc = Math.min(1, 460/Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      capImg = c.toDataURL('image/jpeg', 0.72);
-      const p = document.getElementById('capPrev');
-      p.src = capImg; p.style.display = 'block';
-    };
-    img.src = rd.result;
-  };
-  rd.readAsDataURL(f);
-}
+// ---------- capture inbox: + sheet, multi-screenshot OCR, approval flow ----------
 function pruneCaptureImages(){
-  // keep images only on the 12 newest captures — protects storage & sync payload
   const withImg = (state.capture||[]).filter(c=>c.img);
   if(withImg.length > 12) withImg.slice(0, withImg.length-12).forEach(c=>{ delete c.img; });
 }
-function pushCapture(){
-  const t = document.getElementById('capText').value.trim();
-  if(!t && !capImg) return null;
-  state.capture = state.capture || [];
-  const item = {text: t || '(screenshot)', date: dateStr()};
-  if(capImg) item.img = capImg;
-  state.capture.push(item);
-  pruneCaptureImages();
-  document.getElementById('capText').value='';
-  capImg = null;
-  const p = document.getElementById('capPrev'); p.style.display='none'; p.src='';
-  document.getElementById('capFile').value='';
-  return item;
+let addModeVal = 'idea';
+function openAdd(){
+  addModeVal = 'idea'; addMode('idea');
+  document.getElementById('asTitle').value='';
+  document.getElementById('asDate').value = dateStr();
+  document.getElementById('asTime').value='';
+  document.getElementById('addSheet').style.display='block';
+  document.getElementById('asTitle').focus();
 }
-function addCapture(){
-  if(!pushCapture()) return;
-  save(); renderCapture(); renderCommitments();
+function addMode(m){
+  addModeVal = m;
+  document.getElementById('asWhen').style.display = m==='commit' ? 'flex' : 'none';
+  document.getElementById('modeIdea').classList.toggle('primary', m==='idea');
+  document.getElementById('modeCommit').classList.toggle('primary', m==='commit');
+}
+function addSheetGo(){
+  const t = document.getElementById('asTitle').value.trim();
+  if(!t) return;
+  state.capture = state.capture || [];
+  if(addModeVal === 'idea'){
+    state.capture.push({text:t, date:dateStr()});
+  } else {
+    const date = document.getElementById('asDate').value || dateStr();
+    let s = document.getElementById('asTime').value.trim();
+    const m = parseInt(document.getElementById('asMins').value,10) || 30;
+    if(!/^\d{1,2}:\d{2}$/.test(s)){
+      const free = pockets(date === dateStr() ? date : date).filter(p=>p.e-p.s >= m);
+      s = free.length ? toHHMM(free[0].s) : '12:00';
+    }
+    blocksFor(date).push({s, m, label:'📌 '+t.slice(0,30), key:'wld', custom:true});
+    state.capture.push({text:t, date:dateStr()});
+  }
+  document.getElementById('addSheet').style.display='none';
+  save(); renderCapture(); renderBlocks(); renderCommitments();
   if(ghToken() && navigator.onLine) syncNow();
 }
-function autoBlockCapture(){
-  const item = pushCapture();
-  if(!item) return;
-  const free = pockets(dateStr()).filter(p=>p.e-p.s >= 30);
-  if(free.length){
-    blocksFor(dateStr()).push({s: toHHMM(free[0].s), m:30, label:'📌 '+item.text.slice(0,26), key:'wld', custom:true});
+// --- OCR pipeline (tesseract.js, lazy-loaded, fully on-device) ---
+let tessP = null;
+function ensureTesseract(){
+  if(tessP) return tessP;
+  tessP = new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+    s.onload = ()=>res(); s.onerror = ()=>rej(new Error('OCR library failed to load — check connection'));
+    document.head.appendChild(s);
+  });
+  return tessP;
+}
+function fileToData(f, maxDim){
+  return new Promise(res=>{
+    const rd = new FileReader();
+    rd.onload = ()=>{
+      const img = new Image();
+      img.onload = ()=>{
+        const sc = Math.min(1, maxDim/Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        res(c.toDataURL('image/jpeg', 0.78));
+      };
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  });
+}
+const MONTH_RX = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
+const WDAY_RX = {sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
+function parseEventText(text){
+  const t = text.replace(/\s+/g,' ');
+  const lower = t.toLowerCase();
+  const now = new Date();
+  let date = null;
+  // "15 Jul" / "Jul 15" / "15 July 2026"
+  let m = lower.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(\d{4})?/);
+  let m2 = lower.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/);
+  if(m) date = new Date(m[3]?+m[3]:now.getFullYear(), MONTH_RX[m[2]], +m[1]);
+  else if(m2) date = new Date(m2[3]?+m2[3]:now.getFullYear(), MONTH_RX[m2[1]], +m2[2]);
+  else {
+    const dm = lower.match(/(\d{1,2})[\/\.\-](\d{1,2})(?:[\/\.\-](\d{2,4}))?/);
+    if(dm){
+      let d=+dm[1], mo=+dm[2];
+      if(mo>12 && d<=12){ const x=d; d=mo; mo=x; }           // mm/dd came in
+      const y = dm[3] ? (+dm[3]<100 ? 2000+ +dm[3] : +dm[3]) : now.getFullYear();
+      if(mo>=1 && mo<=12 && d>=1 && d<=31) date = new Date(y, mo-1, d);
+    } else if(lower.includes('tomorrow')) date = new Date(now.getTime()+86400000);
+    else { const wd = Object.keys(WDAY_RX).find(w=>lower.includes(w));
+      if(wd){ date = new Date(now); const diff=(WDAY_RX[wd]-now.getDay()+7)%7 || 7; date.setDate(now.getDate()+diff); } }
   }
+  if(date && date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) date.setFullYear(date.getFullYear()+1);
+  // times: "3:30 pm", "15:00", "3pm", ranges
+  const times = [];
+  const trx = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?(?=[\s\-–,.]|$)/g;
+  let tm;
+  while((tm = trx.exec(lower)) && times.length < 4){
+    let h=+tm[1], mi=+(tm[2]||0);
+    if(!tm[3] && !tm[2]) continue;                            // bare number without :mm or am/pm — skip
+    if(tm[3]==='pm' && h<12) h+=12;
+    if(tm[3]==='am' && h===12) h=0;
+    if(h>=0 && h<=23 && mi<=59) times.push(h*60+mi);
+  }
+  let start = times.length ? times[0] : null;
+  let mins = 60;
+  if(times.length>1 && times[1]>times[0] && times[1]-times[0] <= 12*60) mins = times[1]-times[0];
+  // title: first line with letters that isn't mostly date/time noise
+  const lines = text.split('\n').map(x=>x.trim()).filter(x=>/[a-zA-Z]{3,}/.test(x));
+  const title = (lines.find(l=>!/^\W*(mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d)/i.test(l)) || lines[0] || '(could not read — edit me)').slice(0,44);
+  const dstr = date ? date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0') : dateStr();
+  return { title, date: dstr, time: start!==null ? toHHMM(start) : '', mins };
+}
+let props = [];
+async function onShots(e){
+  const files = Array.from(e.target.files || []);
+  if(!files.length) return;
+  const st = document.getElementById('ocrStatus');
+  st.style.display='block';
+  try{
+    st.textContent = 'Loading reader (first time only)…';
+    await ensureTesseract();
+    props = [];
+    for(let i=0;i<files.length;i++){
+      st.textContent = `Reading screenshot ${i+1} of ${files.length}…`;
+      const thumb = await fileToData(files[i], 460);
+      const big = await fileToData(files[i], 1400);
+      let text = '';
+      try{ const r = await Tesseract.recognize(big, 'eng'); text = r.data.text || ''; }catch(err){}
+      const ev = parseEventText(text);
+      props.push(Object.assign(ev, {img: thumb, include: true}));
+    }
+    st.style.display='none';
+    renderProps();
+    document.getElementById('propBox').style.display='block';
+  }catch(err){
+    st.textContent = 'Could not read screenshots ('+err.message+') — add manually with ＋.';
+  }
+  document.getElementById('capFile').value='';
+}
+function renderProps(){
+  document.getElementById('propList').innerHTML = props.map((p,i)=>`
+    <div class="proprow">
+      <input type="checkbox" ${p.include?'checked':''} onchange="props[${i}].include=this.checked">
+      <img src="${p.img}" style="height:40px; border-radius:6px; border:1px solid var(--grid)">
+      <input type="text" value="${p.title.replace(/"/g,'&quot;')}" onchange="props[${i}].title=this.value">
+      <input type="date" value="${p.date}" onchange="props[${i}].date=this.value" style="width:125px">
+      <input type="text" value="${p.time}" placeholder="hh:mm" onchange="props[${i}].time=this.value" style="width:60px">
+      <input type="number" value="${p.mins}" step="15" onchange="props[${i}].mins=parseInt(this.value,10)||60" style="width:56px">
+    </div>`).join('');
+}
+function approveProps(){
+  state.capture = state.capture || [];
+  props.filter(p=>p.include).forEach(p=>{
+    let s = /^\d{1,2}:\d{2}$/.test(p.time) ? p.time : null;
+    if(!s){ const free = pockets(p.date).filter(x=>x.e-x.s >= p.mins); s = free.length ? toHHMM(free[0].s) : '12:00'; }
+    blocksFor(p.date).push({s, m: p.mins||60, label:'📌 '+p.title.slice(0,30), key:'wld', custom:true});
+    state.capture.push({text: p.title, date: dateStr(), img: p.img});
+  });
+  pruneCaptureImages();
+  document.getElementById('propBox').style.display='none';
   save(); renderCapture(); renderBlocks(); renderCommitments();
   if(ghToken() && navigator.onLine) syncNow();
 }
@@ -1597,23 +1737,6 @@ function clearDayBlocks(){
   state.blocks = state.blocks || {};
   state.blocks[dateStr()] = [];
   save(); renderBlocks(); renderCommitments();
-}
-function quickNow(offsetMin){
-  const t = new Date(Date.now() + offsetMin*60000);
-  const m = Math.ceil((t.getHours()*60+t.getMinutes())/5)*5;
-  document.getElementById('qcDate').value = dateStr();
-  document.getElementById('qcTime').value = toHHMM(Math.min(m, CAL_END-15));
-}
-function addQuick(){
-  const label = document.getElementById('qcLabel').value.trim();
-  const date = document.getElementById('qcDate').value;
-  const s = document.getElementById('qcTime').value.trim();
-  const m = parseInt(document.getElementById('qcMins').value,10) || 30;
-  if(!label || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{1,2}:\d{2}$/.test(s)) return;
-  blocksFor(date).push({s, m, label, key:'wld', custom:true});
-  document.getElementById('qcLabel').value=''; document.getElementById('qcTime').value='';
-  save(); renderBlocks();
-  if(ghToken() && navigator.onLine) syncNow();
 }
 setInterval(renderBlocks, 60000);
 // keep now-line, clock, and gauge honest when the app resumes from background (iOS home-screen apps
