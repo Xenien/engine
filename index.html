@@ -106,8 +106,11 @@
   .calhr{position:absolute; left:0; right:0; border-top:1px solid var(--grid); font-size:9.5px; color:var(--muted); padding-left:4px}
   .calblk{position:absolute; left:34px; right:4px; border-radius:7px; padding:2px 8px; font-size:11.5px; font-weight:600; overflow:hidden; touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; border-left:3px solid}
   .calblk .bx{position:absolute; top:1px; right:5px; cursor:pointer; font-weight:700; opacity:.6}
-  .rz{position:absolute; left:0; right:14px; height:9px; cursor:ns-resize; touch-action:none}
-  .rz-t{top:-3px} .rz-b{bottom:-3px}
+  .rz{position:absolute; left:0; right:26px; height:20px; cursor:ns-resize; touch-action:none; z-index:2}
+  .rz-t{top:-8px} .rz-b{bottom:-8px}
+  .rz::after{content:''; position:absolute; left:50%; transform:translateX(-50%); width:34px; height:4px; border-radius:2px; background:currentColor; opacity:.28}
+  .rz-t::after{top:7px} .rz-b::after{bottom:7px}
+  @media (pointer:coarse){ .rz{height:26px} .rz-t{top:-11px} .rz-b{bottom:-11px} }
   /* quiet reflect button */
   #reflectBtn{font:500 13px inherit; letter-spacing:.01em; background:var(--surface); color:var(--ink2);
     border:1px solid var(--border); border-radius:999px; padding:8px 16px; cursor:pointer; transition:background .2s, color .2s}
@@ -176,6 +179,24 @@
       <p id="ocrMsg" style="margin-top:12px; font-weight:600; font-size:14px">—</p>
       <div style="height:6px; background:var(--page); border:1px solid var(--grid); border-radius:3px; margin-top:12px; overflow:hidden"><span id="ocrPct" style="display:block; height:100%; width:0; background:var(--pdi); transition:width .3s"></span></div>
       <div class="btnrow" style="justify-content:center; margin-top:16px"><button class="btn" onclick="cancelOcr()">Cancel</button></div>
+    </div>
+  </div>
+
+  <!-- tap-to-edit a calendar block: exact times, thumb-friendly -->
+  <div id="blkEdit" class="sheetov" style="display:none">
+    <div class="card sheet" style="max-width:360px">
+      <h2>Edit block</h2>
+      <input id="beLabel" type="text" style="width:100%; font:14px inherit; padding:10px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink); margin-top:8px">
+      <div class="btnrow" style="align-items:center; margin-top:10px; gap:10px">
+        <label style="font-size:12px; color:var(--muted)">Start<br><input id="beStart" type="time" step="300" style="font:15px inherit; padding:9px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)" oninput="beTimeChanged()"></label>
+        <label style="font-size:12px; color:var(--muted)">End<br><input id="beEnd" type="time" step="300" style="font:15px inherit; padding:9px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)" oninput="beTimeChanged()"></label>
+        <label style="font-size:12px; color:var(--muted)">Minutes<br><input id="beMins" type="number" step="5" style="width:72px; font:15px inherit; padding:9px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)" oninput="beMinsChanged()"></label>
+      </div>
+      <div class="btnrow" style="margin-top:14px">
+        <button class="btn primary" onclick="saveBlkEdit()">Save</button>
+        <button class="btn" onclick="document.getElementById('blkEdit').style.display='none'">Cancel</button>
+        <button class="btn" style="margin-left:auto; color:var(--esp)" onclick="delFromEdit()">Delete</button>
+      </div>
     </div>
   </div>
 
@@ -319,8 +340,9 @@
           <button class="btn" style="padding:4px 11px" onclick="calNav(1)">›</button>
           <button class="btn" id="calTodayBtn" style="font-size:11px; padding:4px 9px; display:none" onclick="calGoToday()">today</button>
         </div>
+        <p class="hint" id="calTzLine" style="margin:-4px 0 8px; text-align:center; font-size:11px">—</p>
         <div id="calWrap"><div id="calBody"></div></div>
-        <p class="hint" style="margin-top:8px">Scroll the calendar — it opens centered on NOW. Drag a block to move it (snaps to 15 min). ✕ removes it. Dashed = free pockets.</p>
+        <p class="hint" style="margin-top:8px">Scroll the calendar — it opens centered on NOW. Drag a block to move it, drag its top/bottom edge to resize (snaps to 15 min), tap it once for exact times. ✕ removes it. Dashed = free pockets.</p>
       </div>
 
       <div class="tbmain">
@@ -1283,66 +1305,215 @@ function ensureTesseract(){
   });
   return tessP;
 }
-function fileToData(f, maxDim){
+function loadImg(f){
   return new Promise(res=>{
     const rd = new FileReader();
-    rd.onload = ()=>{
-      const img = new Image();
-      img.onload = ()=>{
-        const sc = Math.min(1, maxDim/Math.max(img.width, img.height));
-        const c = document.createElement('canvas');
-        c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-        res(c.toDataURL('image/jpeg', 0.78));
-      };
-      img.src = rd.result;
-    };
+    rd.onload = ()=>{ const img = new Image(); img.onload = ()=>res(img); img.src = rd.result; };
     rd.readAsDataURL(f);
+  });
+}
+function fileToData(f, maxDim){
+  return loadImg(f).then(img=>{
+    const sc = Math.min(1, maxDim/Math.max(img.width, img.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width*sc); c.height = Math.round(img.height*sc);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    return c.toDataURL('image/jpeg', 0.78);
+  });
+}
+// OCR preprocessing: phone screenshots are dark-mode UI with smallish text — tesseract wants
+// big dark glyphs on a light page. So: gentle upscale, grayscale, auto-invert dark shots,
+// percentile contrast stretch, lossless PNG out.
+function preprocessForOcr(f){
+  return loadImg(f).then(img=>{
+    const md = Math.max(img.width, img.height);
+    const s = md < 1700 ? Math.min(2, 1700/md) : Math.min(1, 2200/md);
+    const c = document.createElement('canvas');
+    c.width = Math.round(img.width*s); c.height = Math.round(img.height*s);
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    const id = ctx.getImageData(0, 0, c.width, c.height), px = id.data;
+    const hist = new Uint32Array(256);
+    for(let i=0; i<px.length; i+=4){
+      const g = (px[i]*299 + px[i+1]*587 + px[i+2]*114)/1000 | 0;
+      px[i]=px[i+1]=px[i+2]=g; hist[g]++;
+    }
+    const n = px.length/4;
+    let sum=0; for(let g=0; g<256; g++) sum += g*hist[g];
+    const invert = (sum/n) < 120;                       // dark-mode screenshot → flip it
+    // 3rd / 97th percentile stretch
+    let lo=0, hi=255, acc=0;
+    for(let g=0; g<256; g++){ acc+=hist[g]; if(acc >= n*0.03){ lo=g; break; } }
+    acc=0; for(let g=255; g>=0; g--){ acc+=hist[g]; if(acc >= n*0.03){ hi=g; break; } }
+    const span = Math.max(1, hi-lo);
+    for(let i=0; i<px.length; i+=4){
+      let v = Math.max(0, Math.min(255, (px[i]-lo)*255/span));
+      if(invert) v = 255-v;
+      px[i]=px[i+1]=px[i+2]=v;
+    }
+    ctx.putImageData(id, 0, 0);
+    return c.toDataURL('image/png');
   });
 }
 const MONTH_RX = {jan:0,feb:1,mar:2,apr:3,may:4,jun:5,jul:6,aug:7,sep:8,oct:9,nov:10,dec:11};
 const WDAY_RX = {sunday:0,monday:1,tuesday:2,wednesday:3,thursday:4,friday:5,saturday:6};
+// ---- timezone smarts: "9 PM Dubai", "1 AM Malaysia", "5:00 pm Dubai time" all convert to device-local ----
+const TZ_ALIASES = [
+  [/kuala\s*lumpur|malaysia\w*|\bmyt\b|\bkl\b/, 'Asia/Kuala_Lumpur', 'Malaysia'],
+  [/\bdubai\b|\buae\b|abu\s*dhabi|emirates|\bgst\b|gulf\s*(?:standard\s*)?time/, 'Asia/Dubai', 'Dubai'],
+  [/argentin\w*|buenos\s*aires|\bart\b/, 'America/Argentina/Buenos_Aires', 'Argentina'],
+  [/riyadh|saudi|\bksa\b|jeddah/, 'Asia/Riyadh', 'Saudi'],
+  [/cairo|egypt/, 'Africa/Cairo', 'Egypt'],
+  [/doha|qatar/, 'Asia/Qatar', 'Qatar'],
+  [/kuwait/, 'Asia/Kuwait', 'Kuwait'],
+  [/bahrain|manama/, 'Asia/Bahrain', 'Bahrain'],
+  [/amman|jordan/, 'Asia/Amman', 'Jordan'],
+  [/beirut|lebanon/, 'Asia/Beirut', 'Lebanon'],
+  [/istanbul|turkey|turkiye|türkiye/, 'Europe/Istanbul', 'Turkey'],
+  [/singapore|\bsgt\b/, 'Asia/Singapore', 'Singapore'],
+  [/jakarta|indonesia|\bwib\b/, 'Asia/Jakarta', 'Jakarta'],
+  [/bangkok|thailand|vietnam|hanoi|saigon|\bict\b/, 'Asia/Bangkok', 'Bangkok'],
+  [/manila|philippin\w*|\bpht\b/, 'Asia/Manila', 'Philippines'],
+  [/india\w*|\bist\b|mumbai|delhi|bangalore|bengaluru|kolkata|chennai|hyderabad/, 'Asia/Kolkata', 'India'],
+  [/pakistan|karachi|lahore|islamabad|\bpkt\b/, 'Asia/Karachi', 'Pakistan'],
+  [/tokyo|japan|\bjst\b|osaka/, 'Asia/Tokyo', 'Japan'],
+  [/seoul|korea|\bkst\b/, 'Asia/Seoul', 'Korea'],
+  [/beijing|shanghai|china|shenzhen|hong\s*kong|\bhkt\b|taiwan|taipei/, 'Asia/Shanghai', 'China/HK'],
+  [/sydney|melbourne|brisbane|\baest\b|\baedt\b|australia\w*/, 'Australia/Sydney', 'Sydney'],
+  [/perth|\bawst\b/, 'Australia/Perth', 'Perth'],
+  [/auckland|new\s*zealand|\bnzst\b|\bnzdt\b/, 'Pacific/Auckland', 'New Zealand'],
+  [/london|\buk\b|britain|british|england|\bbst\b/, 'Europe/London', 'UK'],
+  [/\butc\b|\bgmt\b|zulu/, 'UTC', 'UTC'],
+  [/\bcet\b|\bcest\b|paris|berlin|madrid|amsterdam|rome|milan|brussels|vienna|zurich|geneva|spain|germany|france|italy|netherlands/, 'Europe/Paris', 'Central Europe'],
+  [/athens|greece|\beet\b|helsinki|bucharest/, 'Europe/Athens', 'Eastern Europe'],
+  [/moscow|\bmsk\b|russia\w*/, 'Europe/Moscow', 'Moscow'],
+  [/lagos|nigeria|\bwat\b/, 'Africa/Lagos', 'Lagos'],
+  [/nairobi|kenya|\beat\b/, 'Africa/Nairobi', 'Nairobi'],
+  [/johannesburg|south\s*africa|\bsast\b/, 'Africa/Johannesburg', 'South Africa'],
+  [/casablanca|morocco/, 'Africa/Casablanca', 'Morocco'],
+  [/new\s*york|\bnyc\b|\best\b|\bedt\b|eastern\s*(?:standard\s*|daylight\s*)?time|boston|miami|atlanta|washington|toronto|montreal/, 'America/New_York', 'US Eastern'],
+  [/chicago|\bcst\b|\bcdt\b|central\s*(?:standard\s*|daylight\s*)?time|texas|austin|dallas|houston/, 'America/Chicago', 'US Central'],
+  [/denver|\bmst\b|\bmdt\b|mountain\s*time|phoenix|arizona/, 'America/Denver', 'US Mountain'],
+  [/\bpst\b|\bpdt\b|pacific\s*(?:standard\s*|daylight\s*)?time|los\s*angeles|california|san\s*francisco|seattle|vancouver/, 'America/Los_Angeles', 'US Pacific'],
+  [/são\s*paulo|sao\s*paulo|brazil|\bbrt\b|rio\b/, 'America/Sao_Paulo', 'Brazil'],
+  [/mexico/, 'America/Mexico_City', 'Mexico'],
+];
+function findTz(seg){
+  for(const [rx, tz, label] of TZ_ALIASES) if(rx.test(seg)) return {tz, label};
+  return null;
+}
+function localTzName(){ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(e){ return ''; } }
+function zoneOffsetMin(tz, atUtcMs){
+  const f = new Intl.DateTimeFormat('en-US', {timeZone:tz, hour12:false, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+  const p = {}; f.formatToParts(new Date(atUtcMs)).forEach(x=>p[x.type]=x.value);
+  return (Date.UTC(+p.year, +p.month-1, +p.day, (+p.hour)%24, +p.minute) - atUtcMs)/60000;
+}
+function wallToInstant(tz, y, mo, d, hh, mm){       // wall-clock in tz → real UTC instant
+  let guess = Date.UTC(y, mo, d, hh, mm);
+  guess = Date.UTC(y, mo, d, hh, mm) - zoneOffsetMin(tz, guess)*60000;
+  guess = Date.UTC(y, mo, d, hh, mm) - zoneOffsetMin(tz, guess)*60000; // 2nd pass settles DST edges
+  return guess;
+}
+function nowInZone(tz){ return new Date(new Date().toLocaleString('en-US', {timeZone:tz})); }
+function fmt12(min){ const h=Math.floor(min/60), m=min%60; const ap=h>=12?'PM':'AM'; const h12=h%12||12; return h12+(m?':'+String(m).padStart(2,'0'):'')+' '+ap; }
 function parseEventText(text){
-  const t = text.replace(/\s+/g,' ');
-  const lower = t.toLowerCase();
+  // drop the phone status bar: a short first line that is just a clock (+ signal/battery noise)
+  text = text.replace(/^\s*\d{1,2}[:.]\d{2}\s*[^\n]{0,24}\n/, '');
+  const lower = ' '+text.replace(/\s+/g,' ').toLowerCase()+' ';
   const now = new Date();
-  let date = null;
-  // "15 Jul" / "Jul 15" / "15 July 2026"
-  let m = lower.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(\d{4})?/);
-  let m2 = lower.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/);
-  if(m) date = new Date(m[3]?+m[3]:now.getFullYear(), MONTH_RX[m[2]], +m[1]);
-  else if(m2) date = new Date(m2[3]?+m2[3]:now.getFullYear(), MONTH_RX[m2[1]], +m2[2]);
-  else {
-    const dm = lower.match(/(\d{1,2})[\/\.\-](\d{1,2})(?:[\/\.\-](\d{2,4}))?/);
-    if(dm){
-      let d=+dm[1], mo=+dm[2];
-      if(mo>12 && d<=12){ const x=d; d=mo; mo=x; }           // mm/dd came in
-      const y = dm[3] ? (+dm[3]<100 ? 2000+ +dm[3] : +dm[3]) : now.getFullYear();
-      if(mo>=1 && mo<=12 && d>=1 && d<=31) date = new Date(y, mo-1, d);
-    } else if(lower.includes('tomorrow')) date = new Date(now.getTime()+86400000);
-    else { const wd = Object.keys(WDAY_RX).find(w=>lower.includes(w));
-      if(wd){ date = new Date(now); const diff=(WDAY_RX[wd]-now.getDay()+7)%7 || 7; date.setDate(now.getDate()+diff); } }
-  }
-  if(date && date < new Date(now.getFullYear(), now.getMonth(), now.getDate())) date.setFullYear(date.getFullYear()+1);
-  // times: "3:30 pm", "15:00", "3pm", ranges
-  const times = [];
-  const trx = /(\d{1,2})(?::(\d{2}))?\s*(am|pm)?(?=[\s\-–,.]|$)/g;
+  const localTz = localTzName();
+  // --- 1. find candidate times; prefer one with a timezone named next to it ---
+  const cands = [];
+  const trx = /(\d{1,2})(?:[:.](\d{2}))?\s*(a\.?m\.?|p\.?m\.?)?(?=[\s\-–—,.)\/;:]|$)/g;
   let tm;
-  while((tm = trx.exec(lower)) && times.length < 4){
+  while((tm = trx.exec(lower)) && cands.length < 8){
     let h=+tm[1], mi=+(tm[2]||0);
-    if(!tm[3] && !tm[2]) continue;                            // bare number without :mm or am/pm — skip
-    if(tm[3]==='pm' && h<12) h+=12;
-    if(tm[3]==='am' && h===12) h=0;
-    if(h>=0 && h<=23 && mi<=59) times.push(h*60+mi);
+    const ap = tm[3] ? tm[3][0] : '';
+    if(!ap && !tm[2]) continue;                       // bare number: not a time
+    if(ap==='p' && h<12) h+=12;
+    if(ap==='a' && h===12) h=0;
+    if(h>23 || mi>59) continue;
+    const after = lower.slice(tm.index + tm[0].length, tm.index + tm[0].length + 40);
+    if(/^\s*[%）)]|^\s*\d{1,3}\s*%/.test(after)) continue;  // battery percentage, not a meeting
+    const before = lower.slice(Math.max(0, tm.index-30), tm.index);
+    const zone = findTz(after) || findTz(before);
+    cands.push({min: h*60+mi, idx: tm.index, len: tm[0].length, zone, after, before, hasAp: !!ap});
   }
-  let start = times.length ? times[0] : null;
+  const anchor = cands.find(c=>c.zone) || cands[0] || null;
+  // --- 2. duration: explicit range "5-6:30pm" / "5 to 6 pm" right after the anchor ---
   let mins = 60;
-  if(times.length>1 && times[1]>times[0] && times[1]-times[0] <= 12*60) mins = times[1]-times[0];
-  // title: first line with letters that isn't mostly date/time noise
+  if(anchor){
+    const nxt = cands.find(c => c.idx > anchor.idx && c.idx - (anchor.idx+anchor.len) <= 12
+      && /^\s*(?:-|–|—|to|until|till)\s*$/.test(lower.slice(anchor.idx+anchor.len, c.idx)));
+    if(nxt && nxt.min > anchor.min && nxt.min - anchor.min <= 12*60) mins = nxt.min - anchor.min;
+  }
+  // --- 3. date, interpreted in the event's own timezone ---
+  const zoneNow = anchor && anchor.zone ? nowInZone(anchor.zone.tz) : now;
+  let date = null;
+  const nearTxt = anchor ? anchor.after + ' ' + anchor.before : '';
+  const dateFrom = src => {
+    let m = src.match(/(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s*(\d{4})?/);
+    if(m) return new Date(m[3]?+m[3]:zoneNow.getFullYear(), MONTH_RX[m[2]], +m[1]);
+    m = src.match(/(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s*(\d{4}))?/);
+    if(m) return new Date(m[3]?+m[3]:zoneNow.getFullYear(), MONTH_RX[m[1]], +m[2]);
+    m = src.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+    if(m){
+      let d=+m[1], mo=+m[2];
+      if(mo>12 && d<=12){ const x=d; d=mo; mo=x; }
+      const y = m[3] ? (+m[3]<100 ? 2000+ +m[3] : +m[3]) : zoneNow.getFullYear();
+      if(mo>=1 && mo<=12 && d>=1 && d<=31) return new Date(y, mo-1, d);
+    }
+    return null;
+  };
+  const wdayFrom = src => {
+    const w = Object.keys(WDAY_RX).find(w=>src.includes(w) || src.includes(w.slice(0,3)+' '));
+    if(!w) return null;
+    const d = new Date(zoneNow.getFullYear(), zoneNow.getMonth(), zoneNow.getDate());
+    d.setDate(d.getDate() + ((WDAY_RX[w]-zoneNow.getDay()+7)%7));   // same weekday = today, not next week
+    return d;
+  };
+  date = dateFrom(nearTxt) || dateFrom(lower)
+      || (anchor ? wdayFrom(nearTxt) : null) || wdayFrom(lower)
+      || (lower.includes('tomorrow') ? new Date(zoneNow.getTime()+86400000) : null)
+      || new Date(zoneNow.getFullYear(), zoneNow.getMonth(), zoneNow.getDate());
+  // --- 4. convert stated-zone wall clock → device-local ---
+  let start = anchor ? anchor.min : null, note = '';
+  let dstr;
+  if(anchor && anchor.zone && anchor.zone.tz !== localTz && localTz){
+    const inst = wallToInstant(anchor.zone.tz, date.getFullYear(), date.getMonth(), date.getDate(), Math.floor(anchor.min/60), anchor.min%60);
+    const lo = new Date(inst);
+    dstr = lo.getFullYear()+'-'+String(lo.getMonth()+1).padStart(2,'0')+'-'+String(lo.getDate()).padStart(2,'0');
+    start = lo.getHours()*60 + lo.getMinutes();
+    note = fmt12(anchor.min)+' '+anchor.zone.label+' time → '+fmt12(start)+' yours ('+localTz.split('/').pop().replace(/_/g,' ')+')';
+    // if that instant already passed, it's next week's occurrence
+    if(inst < now.getTime() - 60000){
+      const inst2 = inst + 7*86400000, lo2 = new Date(inst2);
+      dstr = lo2.getFullYear()+'-'+String(lo2.getMonth()+1).padStart(2,'0')+'-'+String(lo2.getDate()).padStart(2,'0');
+    }
+  } else {
+    if(anchor && anchor.zone) note = anchor.zone.label+' time = your time';
+    if(date.getTime() < new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) date.setDate(date.getDate()+7);
+    dstr = date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');
+  }
+  // --- 5. title: score lines, skip UI chrome ---
+  const NOISE = /^(re:|fwd:|inbox|sent|drafts|archive|reply|forward|delete|to:|from:|cc:|subject:|search|edited|joined|added|today|yesterday|home|dms|activity|later|threads|huddle|canvas|message\b|mute|notifications|details|back|done|cancel|view|open|see (more|all)|show (more|all)|\d+ (member|repl|message))/i;
+  const GOOD = /(meeting|session|call|class|coaching|study|group|review|invite|catch.?up|sync|standup|workshop|webinar|lesson|tutor|interview|appointment|dinner|lunch|coffee)/i;
   const lines = text.split('\n').map(x=>x.trim()).filter(x=>/[a-zA-Z]{3,}/.test(x));
-  const title = (lines.find(l=>!/^\W*(mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d)/i.test(l)) || lines[0] || '(could not read — edit me)').slice(0,44);
-  const dstr = date ? date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0') : dateStr();
-  return { title, date: dstr, time: start!==null ? toHHMM(start) : '', mins };
+  let best = null, bestScore = -99;
+  lines.forEach((l, li)=>{
+    let sc = 0;
+    if(NOISE.test(l)) sc -= 4;
+    if(GOOD.test(l)) sc += 4;
+    if(/^\W*(mon|tue|wed|thu|fri|sat|sun|jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|\d)/i.test(l)) sc -= 2;
+    const letters = (l.match(/[a-zA-Z]/g)||[]).length;
+    if(letters/l.length < 0.5) sc -= 2;               // OCR garbage lines are symbol soup
+    if(l.length >= 8 && l.length <= 70) sc += 1;
+    if(li < 6) sc += 1;                                // headers live near the top
+    if(sc > bestScore){ bestScore = sc; best = l; }
+  });
+  const title = (best || '(could not read — edit me)').replace(/^(re|fwd):\s*/i,'').slice(0,44);
+  return { title, date: dstr, time: start!==null ? toHHMM(start) : '', mins, note };
 }
 let props = [];
 let tessWorker = null, ocrCancelled = false, ocrBaseMsg = '';
@@ -1374,12 +1545,12 @@ async function onShots(e){
       ocrBaseMsg = `Reading screenshot ${i+1} of ${files.length} —`;
       setOcrPct(0);
       const thumb = await fileToData(files[i], 460);
-      const big = await fileToData(files[i], 1100);
+      const big = await preprocessForOcr(files[i]);
       let text = '';
       try{
         const r = await Promise.race([
           worker.recognize(big),
-          new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), 45000))
+          new Promise((_, rej)=>setTimeout(()=>rej(new Error('timeout')), 75000))
         ]);
         text = (r && r.data && r.data.text) || '';
       }catch(err){ /* one stuck image never blocks the batch */ }
@@ -1411,6 +1582,7 @@ function renderProps(){
       <input type="date" value="${p.date}" onchange="props[${i}].date=this.value" style="width:125px">
       <input type="text" value="${p.time}" placeholder="hh:mm" onchange="props[${i}].time=this.value" style="width:60px">
       <input type="number" value="${p.mins}" step="15" onchange="props[${i}].mins=parseInt(this.value,10)||60" style="width:56px">
+      ${p.note ? `<span class="hint" style="width:100%; margin:0">🌍 ${p.note}</span>` : ''}
     </div>`).join('');
 }
 function approveProps(){
@@ -1660,6 +1832,13 @@ function renderBlocks(){
   const free = pockets(d);
   document.getElementById('calDateLine').textContent =
     new Date(d+'T12:00:00').toLocaleDateString('en-MY',{weekday:'long', day:'numeric', month:'short'}) + (isTodayView ? ' — today' : '');
+  const tzEl = document.getElementById('calTzLine');
+  if(tzEl){
+    const off = -new Date().getTimezoneOffset();
+    const sg = off>=0?'+':'−', ao = Math.abs(off);
+    tzEl.textContent = '🌍 All times in your device timezone: ' + (localTzName()||'local').replace(/_/g,' ') +
+      ' (GMT'+sg+String(Math.floor(ao/60)).padStart(2,'0')+':'+String(ao%60).padStart(2,'0')+')';
+  }
   document.getElementById('calTodayBtn').style.display = isTodayView ? 'none' : 'inline-block';
   cal.style.height = (CAL_END-CAL_START)*K + 'px';
   let html = '';
@@ -1753,6 +1932,7 @@ function attachDrag(el){
   el.addEventListener('pointerup', e=>{
     if(!dragging) return;
     dragging=false; el.style.zIndex=''; el.style.opacity=''; el.style.cursor='grab';
+    if(!moved){ renderBlocks(); openBlkEdit(parseInt(el.dataset.i,10)); return; }
     if(moved){
       const i = parseInt(el.dataset.i,10);
       const b = blocksFor(calDate)[i];
@@ -1775,6 +1955,48 @@ function attachDrag(el){
     renderBlocks();
   });
   el.addEventListener('pointercancel', ()=>{ dragging=false; renderBlocks(); });
+}
+// tap a block → exact editor (the thumb-precise alternative to dragging edges)
+let beIdx = -1;
+function openBlkEdit(i){
+  const b = blocksFor(calDate)[i];
+  if(!b) return;
+  beIdx = i;
+  document.getElementById('beLabel').value = b.label;
+  document.getElementById('beStart').value = b.s;
+  document.getElementById('beEnd').value = toHHMM(Math.min(CAL_END, toMin(b.s)+b.m));
+  document.getElementById('beMins').value = b.m;
+  document.getElementById('blkEdit').style.display = 'block';
+}
+function beTimeChanged(){
+  const s = document.getElementById('beStart').value, e = document.getElementById('beEnd').value;
+  if(/^\d{2}:\d{2}$/.test(s) && /^\d{2}:\d{2}$/.test(e)){
+    let m = toMin(e)-toMin(s);
+    if(m <= 0) m += 24*60;                          // crosses midnight → wrap
+    document.getElementById('beMins').value = m;
+  }
+}
+function beMinsChanged(){
+  const s = document.getElementById('beStart').value, m = parseInt(document.getElementById('beMins').value,10);
+  if(/^\d{2}:\d{2}$/.test(s) && m>0) document.getElementById('beEnd').value = toHHMM(Math.min(CAL_END-1, toMin(s)+m) % (24*60));
+}
+function saveBlkEdit(){
+  const b = blocksFor(calDate)[beIdx];
+  if(b){
+    const s = document.getElementById('beStart').value;
+    let m = parseInt(document.getElementById('beMins').value,10);
+    const label = document.getElementById('beLabel').value.trim();
+    if(/^\d{2}:\d{2}$/.test(s)) b.s = s;
+    if(m>0) b.m = Math.min(m, CAL_END - toMin(b.s));
+    if(label) b.label = label;
+    save();
+  }
+  document.getElementById('blkEdit').style.display = 'none';
+  renderBlocks(); renderCommitments();
+}
+function delFromEdit(){
+  document.getElementById('blkEdit').style.display = 'none';
+  if(beIdx >= 0) delBlock(beIdx);
 }
 function delBlock(i){ blocksFor(calDate).splice(i,1); save(); renderBlocks(); renderCommitments(); }
 function delFuture(date, s){
