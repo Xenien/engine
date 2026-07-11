@@ -99,6 +99,17 @@
   .calblk .bx{position:absolute; top:1px; right:5px; cursor:pointer; font-weight:700; opacity:.6}
   .rz{position:absolute; left:0; right:14px; height:9px; cursor:ns-resize; touch-action:none}
   .rz-t{top:-3px} .rz-b{bottom:-3px}
+  /* Clippy-era reflect button */
+  #reflectBtn{font-family:"Comic Sans MS","Chalkboard SE","Segoe UI",cursive; font-size:13px; font-weight:700;
+    background:linear-gradient(180deg,#fff3c4 0%,#ffd24d 45%,#ff9d1a 100%); color:#5b3600;
+    border:2px outset #ffe08a; border-radius:10px; padding:8px 15px; cursor:pointer;
+    box-shadow:2px 2px 0 #a8620a, 0 0 14px rgba(255,170,30,.5); animation:clippywiggle 5s infinite; position:relative}
+  #reflectBtn:active{border-style:inset; transform:translate(1px,1px)}
+  @keyframes clippywiggle{0%,86%,100%{transform:rotate(0)}88%{transform:rotate(-5deg) scale(1.07)}91%{transform:rotate(4deg)}94%{transform:rotate(-2deg) scale(1.03)}97%{transform:rotate(0)}}
+  #clippyBubble{position:fixed; right:16px; bottom:18px; z-index:60; max-width:250px; background:#fffceb; color:#333;
+    border:2px solid #a8a15c; border-radius:12px; padding:12px 14px; font-family:"Comic Sans MS","Chalkboard SE",cursive;
+    font-size:12.5px; box-shadow:4px 4px 0 rgba(0,0,0,.25); cursor:pointer; display:none}
+  #clippyBubble::after{content:""; position:absolute; bottom:-10px; right:28px; border:10px solid transparent; border-top-color:#a8a15c; border-bottom:none}
   .calfree{position:absolute; left:34px; right:4px; border:1.5px dashed var(--baseline); border-radius:7px; font-size:10px; color:var(--muted); padding:1px 8px}
   .nowline{position:absolute; left:0; right:0; border-top:2.5px solid var(--now); z-index:4}
   .nowtag{position:absolute; left:2px; top:-9px; background:var(--now); color:#fff; font-size:9px; font-weight:800; padding:1px 7px; border-radius:99px; letter-spacing:.03em}
@@ -122,12 +133,14 @@
   <header>
     <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap">
       <h1>Adam's Engine</h1>
-      <button class="btn" style="font-size:12.5px" onclick="openReflect()">Feeling reflective?</button>
+      <button id="reflectBtn" onclick="openReflect()">📎✨ Feeling reflective?</button>
     </div>
     <div class="sub" id="todayline">—</div>
     <div class="sub" id="clockline" style="font-variant-numeric:tabular-nums">—</div>
     <div class="sub" id="quoteline" style="margin-top:8px; font-style:italic; font-size:13px">—</div>
   </header>
+
+  <div id="clippyBubble" onclick="openReflect(); this.style.display='none'">📎 <b>It looks like you're trying to have a disciplined day!</b><br>Would you like a reflection with that?</div>
 
   <div id="reflectBox" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:50; padding:24px" onclick="closeReflect(event)">
     <div class="card" style="max-width:520px; margin:12vh auto 0; padding:24px" onclick="event.stopPropagation()">
@@ -990,16 +1003,114 @@ function dailyQuote(){
 }
 
 const REFLECTIONS = [
+  // ===== Qur'an =====
+  {t:'any', q:'Indeed, with hardship comes ease. Indeed, with hardship comes ease.', s:'Qur\'an 94:5–6'},
+  {t:'evening', q:'So when you have finished your duties, stand up for worship, and to your Lord direct your longing.', s:'Qur\'an 94:7–8'},
+  {t:'day', q:'Indeed, Allah will not change the condition of a people until they change what is in themselves.', s:'Qur\'an 13:11'},
+  {t:'any', q:'Allah does not burden a soul beyond that it can bear.', s:'Qur\'an 2:286'},
+  {t:'day', q:'And that man shall have nothing but what he strives for — and that his striving will be seen.', s:'Qur\'an 53:39–40'},
+  {t:'morning', q:'And whoever relies upon Allah — then He is sufficient for him.', s:'Qur\'an 65:3'},
+  {t:'any', q:'And whoever fears Allah — He will make for him a way out, and will provide for him from where he does not expect.', s:'Qur\'an 65:2–3'},
+  {t:'day', q:'And those who strive for Us — We will surely guide them to Our ways.', s:'Qur\'an 29:69'},
+  {t:'any', q:'O you who believe, seek help through patience and prayer. Indeed, Allah is with the patient.', s:'Qur\'an 2:153'},
+  {t:'evening', q:'By time, indeed mankind is in loss — except those who believe, do righteous deeds, and encourage one another to truth and to patience.', s:'Qur\'an 103:1–3'},
+  {t:'day', q:'And when the prayer has concluded, disperse within the land and seek from the bounty of Allah.', s:'Qur\'an 62:10'},
+  {t:'morning', q:'It is He who made the earth tame for you — so walk among its slopes and eat of His provision.', s:'Qur\'an 67:15'},
+  {t:'morning', q:'And say: My Lord, increase me in knowledge.', s:'Qur\'an 20:114'},
+  {t:'evening', q:'Do not despair of the mercy of Allah. Indeed, Allah forgives all sins.', s:'Qur\'an 39:53'},
+  {t:'evening', q:'Did He not find you lost and guide you? And the Hereafter is better for you than the first.', s:'Qur\'an 93:7, 93:4'},
+  {t:'evening', q:'And your Lord is going to give you, and you will be satisfied.', s:'Qur\'an 93:5'},
+  {t:'any', q:'He who created death and life to test you as to which of you is best in deed.', s:'Qur\'an 67:2'},
+  {t:'day', q:'And say: Work! For Allah will see your work, and His Messenger, and the believers.', s:'Qur\'an 9:105'},
+  {t:'day', q:'So compete with one another in good deeds.', s:'Qur\'an 5:48'},
+  {t:'evening', q:'Indeed, the patient will be given their reward without account.', s:'Qur\'an 39:10'},
+  {t:'evening', q:'And the hearing, the sight, the heart — about all of these you will be questioned.', s:'Qur\'an 17:36'},
+  {t:'any', q:'So remember Me; I will remember you. And be grateful to Me and do not deny Me.', s:'Qur\'an 2:152'},
+  {t:'any', q:'O my son, establish prayer, enjoin what is right, forbid what is wrong, and be patient over what befalls you.', s:'Qur\'an 31:17, Luqman to his son'},
+  {t:'evening', q:'Allah is gentle with His servants.', s:'Qur\'an 42:19'},
+  {t:'morning', q:'Indeed, Allah loves those who rely upon Him.', s:'Qur\'an 3:159'},
+  // ===== Hadith (authentic collections) =====
   {t:'morning', q:'Actions are but by intentions, and every man shall have only that which he intended.', s:'Hadith, Sahih al-Bukhari 1 — set the niyyah before the work'},
-  {t:'morning', q:'O son of Adam, you are nothing but a number of days. Whenever each day passes, a part of you has gone.', s:'Hasan al-Basri'},
   {t:'day', q:'The most beloved of deeds to Allah are those done most consistently, even if they are few.', s:'Hadith, Sahih al-Bukhari 6464 — your floor IS worship'},
+  {t:'day', q:'The strong believer is better and more beloved to Allah than the weak believer, while there is good in both. Strive for that which benefits you, seek help from Allah, and do not give up.', s:'Hadith, Sahih Muslim 2664'},
+  {t:'morning', q:'Take advantage of five before five: your youth before your old age, your health before your sickness, your wealth before your poverty, your free time before your occupation, and your life before your death.', s:'Hadith, al-Hakim (sahih)'},
+  {t:'morning', q:'Tie your camel, then place your trust in Allah.', s:'Hadith, Jami at-Tirmidhi 2517'},
+  {t:'day', q:'There are two blessings which many people squander: health and free time.', s:'Hadith, Sahih al-Bukhari 6412'},
+  {t:'evening', q:'Be in this world as if you were a stranger, or a traveler along a path.', s:'Hadith, Sahih al-Bukhari 6416'},
+  {t:'evening', q:'Wondrous is the affair of the believer, for all of it is good for him: if ease comes to him he is grateful, and that is good for him; if hardship strikes him he is patient, and that is good for him.', s:'Hadith, Sahih Muslim 2999'},
   {t:'day', q:'Verily, Allah loves that when any of you does a deed, he perfects it.', s:'Hadith, al-Bayhaqi — ihsan: excellence in the work itself'},
-  {t:'day', q:'Knowledge without action is insanity, and action without knowledge is vanity.', s:'Imam al-Ghazali, Ayyuhal Walad'},
-  {t:'day', q:'Do not be a slave to another when Allah has created you free.', s:'Ali ibn Abi Talib'},
-  {t:'evening', q:'Take account of yourselves before you are taken to account; weigh your deeds before they are weighed for you.', s:'Umar ibn al-Khattab — muhasabah: tonight\'s 21:45 is exactly this'},
-  {t:'evening', q:'Wasted time is worse than death, for death separates you from this world, while wasted time separates you from Allah.', s:'Ibn Qayyim al-Jawziyya'},
-  {t:'evening', q:'O Lord, if I worship You for fear of Hell, burn me in it; and if I worship You in hope of Paradise, exclude me from it. But if I worship You for Your own sake, do not withhold from me Your eternal beauty.', s:'Rabia al-Adawiyya — do the work for the work'},
+  {t:'day', q:'The best of people are those who are most beneficial to people.', s:'Hadith, al-Tabarani (hasan)'},
+  {t:'morning', q:'Whoever prays the dawn prayer is under the protection of Allah.', s:'Hadith, Sahih Muslim 657'},
+  {t:'any', q:'Religion is easy, and no one overburdens himself in it except that it overwhelms him. So be moderate, aim for what is right, and seek help in the mornings, the evenings, and some of the night.', s:'Hadith, Sahih al-Bukhari 39 — pacing is sunnah'},
+  {t:'evening', q:'He who does not thank people has not thanked Allah.', s:'Hadith, Abu Dawud 4811'},
+  {t:'morning', q:'O Allah, bless my nation in its early mornings.', s:'Hadith, Jami at-Tirmidhi 1212 — the 06:50 slot has a du\'a behind it'},
+  {t:'evening', q:'Verily, deeds are judged by their endings.', s:'Hadith, Sahih al-Bukhari 6607'},
+  {t:'evening', q:'Allah is more pleased with the repentance of His servant than one of you who suddenly finds his lost camel in the desert.', s:'Hadith, Bukhari & Muslim — the comeback IS beloved'},
+  {t:'day', q:'None of you truly believes until he loves for his brother what he loves for himself.', s:'Hadith, Sahih al-Bukhari 13'},
+  {t:'day', q:'Make things easy and do not make them difficult; give glad tidings and do not repel people.', s:'Hadith, Sahih al-Bukhari 69'},
+  {t:'day', q:'Charity does not decrease wealth.', s:'Hadith, Sahih Muslim 2588'},
   {t:'any', q:'Whoever travels a path in search of knowledge, Allah makes easy for him a path to Paradise.', s:'Hadith, Sahih Muslim 2699'},
+  // ===== Ali ibn Abi Talib =====
+  {t:'day', q:'Do not be a slave to another when Allah has created you free.', s:'Ali ibn Abi Talib'},
+  {t:'day', q:'Opportunity passes like a cloud — so seize good opportunities when they appear.', s:'Ali ibn Abi Talib, Nahj al-Balagha'},
+  {t:'any', q:'Patience is of two kinds: patience over what pains you, and patience against what you covet.', s:'Ali ibn Abi Talib (attributed)'},
+  {t:'day', q:'The value of every man is in what he does well.', s:'Ali ibn Abi Talib (attributed)'},
+  {t:'day', q:'Work for your worldly life as if you will live forever, and work for your Hereafter as if you will die tomorrow.', s:'Ali ibn Abi Talib (attributed)'},
+  {t:'any', q:'Contentment is wealth that never runs out.', s:'Ali ibn Abi Talib (attributed)'},
+  {t:'evening', q:'Do not let your difficulties fill you with anxiety; it is only in the darkest nights that stars shine most brightly.', s:'Ali ibn Abi Talib (attributed)'},
+  {t:'day', q:'A moment of patience in a moment of anger prevents a thousand moments of regret.', s:'Ali ibn Abi Talib (attributed)'},
+  {t:'any', q:'Your remedy is within you, though you do not sense it; your sickness is from you, though you do not see it.', s:'Ali ibn Abi Talib (attributed, Diwan)'},
+  // ===== Umar, Abu Bakr =====
+  {t:'evening', q:'Take account of yourselves before you are taken to account; weigh your deeds before they are weighed for you.', s:'Umar ibn al-Khattab — muhasabah: the 21:45 bell is exactly this'},
+  {t:'evening', q:'No amount of guilt can change the past, and no amount of worry can change the future.', s:'attributed to Umar ibn al-Khattab'},
+  {t:'any', q:'Sit with those who love Allah, for that enlightens the mind.', s:'attributed to Umar ibn al-Khattab'},
+  {t:'day', q:'Without knowledge, action is useless — and knowledge without action is futile.', s:'attributed to Abu Bakr as-Siddiq'},
+  {t:'evening', q:'Good actions are a guard against the blows of adversity.', s:'attributed to Abu Bakr as-Siddiq'},
+  // ===== Hasan al-Basri =====
+  {t:'morning', q:'O son of Adam, you are nothing but a number of days. Whenever each day passes, a part of you has gone.', s:'Hasan al-Basri'},
+  {t:'morning', q:'The world is three days: yesterday has gone with all that was in it; tomorrow, you may never see; today is yours — so work in it.', s:'Hasan al-Basri (attributed)'},
+  {t:'evening', q:'Do not sell your soul for anything less than the price of Paradise.', s:'Hasan al-Basri (attributed)'},
+  // ===== Imam al-Ghazali =====
+  {t:'day', q:'Knowledge without action is insanity, and action without knowledge is vanity.', s:'Imam al-Ghazali, Ayyuhal Walad'},
+  {t:'any', q:'Never have I dealt with anything more difficult than my own soul, which sometimes helps me and sometimes opposes me.', s:'Imam al-Ghazali'},
+  {t:'day', q:'To get what you love, you must first be patient with what you hate.', s:'Imam al-Ghazali (attributed)'},
+  {t:'evening', q:'Desires make slaves out of kings, and patience makes kings out of slaves.', s:'Imam al-Ghazali (attributed)'},
+  // ===== Ibn Qayyim al-Jawziyya =====
+  {t:'evening', q:'Wasted time is worse than death, for death separates you from this world, while wasted time separates you from Allah.', s:'Ibn Qayyim al-Jawziyya'},
+  {t:'day', q:'Repel the thought, for if you do not, it becomes an idea; repel the idea, for if you do not, it becomes a desire; then a resolve, then action — then habit.', s:'Ibn Qayyim al-Jawziyya, al-Fawa\'id — the capture box exists for this'},
+  {t:'any', q:'The heart will not find complete rest and relief except by being settled with Allah.', s:'Ibn Qayyim al-Jawziyya, Madarij as-Salikin'},
+  {t:'evening', q:'Truly, in the heart there is a void that cannot be filled except by the remembrance of Allah.', s:'Ibn Qayyim al-Jawziyya'},
+  {t:'evening', q:'Gratitude is to use every blessing in obedience to the One who granted it.', s:'Ibn Qayyim al-Jawziyya (attributed)'},
+  // ===== Ibn Taymiyyah =====
+  {t:'any', q:'What can my enemies do to me? My paradise is in my heart. If they imprison me, it is seclusion; if they exile me, it is travel; if they kill me, it is martyrdom.', s:'Ibn Taymiyyah'},
+  {t:'evening', q:'The truly imprisoned one is he whose heart is imprisoned from his Lord, and the truly captive one is he who is captured by his desires.', s:'Ibn Taymiyyah'},
+  // ===== Imam al-Shafi'i =====
+  {t:'day', q:'Your soul — if you do not busy it with truth, it will busy you with falsehood.', s:'attributed to Imam al-Shafi\'i'},
+  {t:'day', q:'Knowledge is not what is memorized; knowledge is what benefits.', s:'attributed to Imam al-Shafi\'i'},
+  {t:'any', q:'Travel! In leaving home there are five benefits: relief of hardship, the earning of a livelihood, knowledge, refinement, and noble companionship.', s:'Imam al-Shafi\'i, Diwan'},
+  {t:'evening', q:'In proportion to your toil are the heights attained — whoever seeks glory must stay up through the nights.', s:'Imam al-Shafi\'i, Diwan — the spurt, sanctified'},
+  {t:'day', q:'Whoever desires the heights without toil wastes his life chasing the impossible.', s:'Imam al-Shafi\'i, Diwan'},
+  // ===== Ibn Ata'illah al-Iskandari (al-Hikam) =====
+  {t:'any', q:'One of the signs of relying on one\'s own deeds is the loss of hope when a downfall occurs.', s:'Ibn Ata\'illah, al-Hikam — never-miss-twice has a lineage'},
+  {t:'any', q:'Bury your existence in the earth of obscurity, for whatever sprouts without first being buried does not come to full fruit.', s:'Ibn Ata\'illah, al-Hikam — do the petty work no one sees'},
+  {t:'morning', q:'No task is arduous if you seek it through your Lord, and nothing is easy if you seek it through yourself.', s:'Ibn Ata\'illah, al-Hikam'},
+  {t:'evening', q:'Let no delay in the time of His giving, despite your persistence in asking, cause you to despair — He has guaranteed a response in what He chooses for you, not in what you choose for yourself.', s:'Ibn Ata\'illah, al-Hikam'},
+  {t:'day', q:'Actions differ because the inspirations of the states of the heart differ.', s:'Ibn Ata\'illah, al-Hikam'},
+  // ===== Rumi =====
+  {t:'any', q:'Yesterday I was clever, so I wanted to change the world. Today I am wise, so I am changing myself.', s:'attributed to Rumi'},
+  {t:'morning', q:'As you start to walk on the way, the way appears.', s:'attributed to Rumi'},
+  {t:'evening', q:'The wound is the place where the Light enters you.', s:'attributed to Rumi'},
+  {t:'day', q:'Set your life on fire. Seek those who fan your flames.', s:'attributed to Rumi'},
+  {t:'day', q:'Patience is not sitting and waiting — it is foreseeing. It is looking at the thorn and seeing the rose.', s:'attributed to Rumi'},
+  {t:'morning', q:'You were born with wings. Why prefer to crawl through life?', s:'attributed to Rumi'},
+  // ===== Rabia al-Adawiyya =====
+  {t:'evening', q:'O Lord, if I worship You for fear of Hell, burn me in it; and if I worship You in hope of Paradise, exclude me from it. But if I worship You for Your own sake, do not withhold from me Your eternal beauty.', s:'Rabia al-Adawiyya — do the work for the work'},
+  {t:'any', q:'I am going to light a fire in Paradise and pour water on Hell, so that both veils may vanish and it becomes clear who worships Allah out of love.', s:'Rabia al-Adawiyya (attributed)'},
+  // ===== Ibn al-Jawzi & others =====
+  {t:'morning', q:'A sign of complete intellect is high aspiration.', s:'attributed to Ibn al-Jawzi'},
+  {t:'day', q:'Whoever contemplates the fruit of a moment of patience will find it sweeter than the moment of desire.', s:'attributed to Ibn al-Jawzi'},
+  {t:'evening', q:'If you knew the value of your own self, you would never debase it.', s:'attributed to Ibn al-Jawzi'},
+  {t:'any', q:'The truthful one does not care if all esteem for him leaves the hearts of people, for the sake of keeping his own heart sound.', s:'attributed to Malik ibn Dinar'},
 ];
 function openReflect(){
   const h = new Date().getHours();
@@ -1012,6 +1123,20 @@ function openReflect(){
   document.getElementById('reflectBox').style.display='block';
 }
 function closeReflect(e){ if(e.target.id==='reflectBox') document.getElementById('reflectBox').style.display='none'; }
+// Clippy lives: proactive bubble, once per app-open, 25s in, auto-dismisses
+const CLIPPY_LINES = [
+  '📎 <b>It looks like you\'re trying to have a disciplined day!</b><br>Would you like a reflection with that?',
+  '📎 <b>Hi! I noticed you\'re working hard.</b><br>The scholars left you a note. Want to read it?',
+  '📎 <b>You\'ve been scrolling for a while!</b><br>One ayah is shorter than one reel. Just saying.',
+  '📎 <b>Reminder from the 1400s:</b><br>your nafs would love a word with you.',
+];
+setTimeout(()=>{
+  const el = document.getElementById('clippyBubble');
+  if(!el || document.getElementById('reflectBox').style.display==='block') return;
+  el.innerHTML = CLIPPY_LINES[Math.floor(Math.random()*CLIPPY_LINES.length)];
+  el.style.display='block';
+  setTimeout(()=>{ el.style.display='none'; }, 12000);
+}, 25000);
 
 function renderTrips(){
   state.trips = state.trips || [];
