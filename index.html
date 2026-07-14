@@ -49,8 +49,9 @@
   /* desktop split: Today + Timeblock side by side */
   @media(min-width:1100px){
     .wrap{max-width:1500px}
-    body.split-on #split{display:grid; grid-template-columns:1fr 1.1fr; gap:18px; align-items:start}
+    body.split-on #split{display:grid; grid-template-columns:1fr 1.6fr; gap:18px; align-items:start}
     body.split-on #split > .tab{display:block}
+    body.split-on nav button[data-tab="blocks"]{display:none} /* calendar is already on screen */
   }
   .tab{display:none}
   .tab.active{display:block}
@@ -98,10 +99,10 @@
   .fcell.current .mo::after{content:" · now"; color:var(--fnd); font-weight:700}
   /* timeblock calendar */
   .tbwrap{display:flex; gap:14px; align-items:flex-start}
-  .tbcal{flex:0 0 320px}
-  .tbmain{flex:1; min-width:0}
-  @media(max-width:760px){ .tbwrap{flex-direction:column} .tbcal{flex:auto; width:100%} }
-  #calWrap{max-height:62vh; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:8px; border:1px solid var(--grid)}
+  .tbcal{flex:1; min-width:0}
+  .tbmain{flex:0 0 220px}
+  @media(max-width:760px){ .tbwrap{flex-direction:column} .tbcal,.tbmain{flex:auto; width:100%} }
+  #calWrap{max-height:80vh; overflow-y:auto; -webkit-overflow-scrolling:touch; border-radius:8px; border:1px solid var(--grid)}
   #calBody{position:relative; border-left:1px solid var(--grid)}
   .calhr{position:absolute; left:0; right:0; border-top:1px solid var(--grid); font-size:9.5px; color:var(--muted); padding-left:4px}
   .calblk{position:absolute; left:34px; right:4px; border-radius:7px; padding:2px 8px; font-size:11.5px; font-weight:600; overflow:hidden; touch-action:none; cursor:grab; user-select:none; -webkit-user-select:none; border-left:3px solid}
@@ -152,25 +153,6 @@
     <div class="sub" id="quoteline" style="margin-top:8px; font-style:italic; font-size:13px">—</div>
   </header>
 
-  <!-- + Add sheet -->
-  <div id="addSheet" class="sheetov" style="display:none" onclick="if(event.target===this)this.style.display='none'">
-    <div class="card sheet">
-      <div class="btnrow" style="margin-bottom:10px">
-        <button class="btn" id="modeIdea" onclick="addMode('idea')">💡 Idea</button>
-        <button class="btn" id="modeCommit" onclick="addMode('commit')">🕐 Commitment</button>
-      </div>
-      <input id="asTitle" placeholder="What is it?" style="width:100%; font:14px inherit; padding:10px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-      <div id="asWhen" class="btnrow" style="align-items:center; margin-top:8px; display:none">
-        <input id="asDate" type="date" style="font:13px inherit; padding:7px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <input id="asTime" placeholder="hh:mm (blank = next free pocket)" style="width:190px; font:13px ui-monospace,monospace; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-        <input id="asMins" type="number" step="5" value="30" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-      </div>
-      <div class="btnrow" style="margin-top:12px">
-        <button class="btn primary" onclick="addSheetGo()">Add</button>
-        <button class="btn" onclick="document.getElementById('addSheet').style.display='none'">Cancel</button>
-      </div>
-    </div>
-  </div>
 
   <!-- OCR progress (blocking, cancellable) -->
   <div id="ocrBox" class="sheetov" style="display:none">
@@ -299,30 +281,18 @@
       <div class="note" id="closeNote">Hit "Log today" at 21:45. It banks your points into the week, extends the streak if the MVD is done, and copies a one-line summary you can paste to Claude or your notes.</div>
     </div>
 
-    <div class="card" id="debrief">
-      <h2>Daily debrief — 60 seconds, feeds tomorrow's build</h2>
-      <p class="hint">Claude reads these. What you write here becomes the next iteration of this OS.</p>
-      <textarea id="fbUse" placeholder="How did you actually use the OS today?" style="min-height:56px"></textarea>
-      <textarea id="fbQol" placeholder="What annoyed you / what QoL improvement do you want?" style="min-height:56px; margin-top:6px"></textarea>
-      <div class="btnrow"><button class="btn primary" onclick="saveDebrief()">Save debrief</button></div>
-      <div class="hint" id="fbNote" style="margin-top:6px"></div>
-    </div>
   </section>
 
   <!-- ============ TIMEBLOCK (Shovel-style) ============ -->
   <section class="tab" id="tab-blocks">
-    <div class="card">
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap">
-        <h2 style="margin:0">Capture &amp; commit</h2>
-        <span class="btnrow" style="margin:0">
-          <button class="btn primary" style="font-size:15px; font-weight:800" onclick="openAdd()">＋ Add</button>
-          <label class="btn" style="cursor:pointer">📷 Screenshots<input type="file" accept="image/*" multiple id="capFile" onchange="onShots(event)" style="display:none"></label>
-        </span>
+    <div class="card" style="padding:12px 16px">
+      <div style="display:flex; align-items:center; gap:8px">
+        <input id="qcapText" placeholder="Capture → calendar: e.g. “Call with Amy Thursday 5pm Dubai”" style="flex:1; min-width:0; font:13.5px inherit; padding:9px 11px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)" onkeydown="if(event.key==='Enter')quickCapture()">
+        <button class="btn primary" onclick="quickCapture()">Add</button>
+        <label class="btn" style="cursor:pointer" title="Read screenshots">📷<input type="file" accept="image/*" multiple id="capFile" onchange="onShots(event)" style="display:none"></label>
       </div>
-      <p class="hint" style="margin-top:6px">＋ for an idea or commitment. 📷 for one or more screenshots — I read them, extract the event and time, and you approve before anything lands on the calendar.</p>
       <div id="ocrStatus" class="hint" style="display:none; margin-top:6px"></div>
       <div id="upcomingList" class="hint" style="margin-top:8px"></div>
-      <div id="capList" style="margin-top:8px"></div>
     </div>
 
     <div class="tbwrap">
@@ -346,21 +316,7 @@
       </div>
 
       <div class="tbmain">
-        <div class="tiles">
-          <div class="tile"><div class="label">Free time left today</div><div class="value" id="freeTime">—</div><div class="delta">pockets between now, your blocks, and 21:45</div></div>
-          <div class="tile"><div class="label">Time needed (open tasks)</div><div class="value" id="needTime">—</div><div class="delta">sum of your task estimates</div></div>
-          <div class="tile"><div class="label">The Cushion</div><div class="value" id="cushion" style="font-size:22px">—</div><div class="delta" id="cushionNote">free minus needed</div></div>
-        </div>
-        <div class="card">
-          <h2>Tasks — with honest time estimates</h2>
-          <p class="hint">The Shovel rule: a task without a time estimate is a lie. Add what must happen, guess the minutes honestly, tick when done.</p>
-          <div class="btnrow" style="align-items:center">
-            <input id="taskName" placeholder="Task (e.g. WMP follow-up email)" style="flex:1; min-width:150px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-            <input id="taskMins" placeholder="min" type="number" step="5" style="width:64px; font:13px inherit; padding:8px; border:1px solid var(--grid); border-radius:8px; background:var(--page); color:var(--ink)">
-            <button class="btn" onclick="addTask()">Add</button>
-          </div>
-          <div id="taskList" style="margin-top:8px"></div>
-        </div>
+        <div class="tile"><div class="label">Free time left today</div><div class="value" id="freeTime">—</div><div class="delta">pockets between now, your blocks, and 21:45</div></div>
       </div>
     </div>
   </section>
@@ -903,8 +859,6 @@ let rvStep = -1, rvAnswers = {};
 function startReview(){ rvStep = 0; rvAnswers = {}; document.getElementById('reviewBox').style.display='block'; showReview(); }
 function showReview(){
   let q = RV_QS[rvStep][1];
-  if(RV_QS[rvStep][0]==='wildcard' && (state.capture||[]).length)
-    q += ' YOUR CAPTURE LIST awaits its audition: ' + state.capture.map(c=>c.text).join(' · ');
   document.getElementById('rvQ').textContent = q;
   document.getElementById('rvA').value = '';
 }
@@ -1252,45 +1206,26 @@ function addTrip(){
 }
 function delTrip(i){ state.trips.splice(i,1); save(); renderTrips(); }
 
-// ---------- capture inbox: + sheet, multi-screenshot OCR, approval flow ----------
-function pruneCaptureImages(){
-  const withImg = (state.capture||[]).filter(c=>c.img);
-  if(withImg.length > 12) withImg.slice(0, withImg.length-12).forEach(c=>{ delete c.img; });
+// ---------- quick capture: one textbox → straight onto the calendar (nothing stored) ----------
+function capStatus(msg, ms){
+  const st = document.getElementById('ocrStatus');
+  st.style.display='block'; st.textContent = msg;
+  setTimeout(()=>{ st.style.display='none'; }, ms||8000);
 }
-let addModeVal = 'idea';
-function openAdd(){
-  addModeVal = 'idea'; addMode('idea');
-  document.getElementById('asTitle').value='';
-  document.getElementById('asDate').value = dateStr();
-  document.getElementById('asTime').value='';
-  document.getElementById('addSheet').style.display='block';
-  document.getElementById('asTitle').focus();
-}
-function addMode(m){
-  addModeVal = m;
-  document.getElementById('asWhen').style.display = m==='commit' ? 'flex' : 'none';
-  document.getElementById('modeIdea').classList.toggle('primary', m==='idea');
-  document.getElementById('modeCommit').classList.toggle('primary', m==='commit');
-}
-function addSheetGo(){
-  const t = document.getElementById('asTitle').value.trim();
+function quickCapture(){
+  const box = document.getElementById('qcapText');
+  const t = box.value.trim();
   if(!t) return;
-  state.capture = state.capture || [];
-  if(addModeVal === 'idea'){
-    state.capture.push({text:t, date:dateStr()});
-  } else {
-    const date = document.getElementById('asDate').value || dateStr();
-    let s = document.getElementById('asTime').value.trim();
-    const m = parseInt(document.getElementById('asMins').value,10) || 30;
-    if(!/^\d{1,2}:\d{2}$/.test(s)){
-      const free = pockets(date === dateStr() ? date : date).filter(p=>p.e-p.s >= m);
-      s = free.length ? toHHMM(free[0].s) : '12:00';
-    }
-    blocksFor(date).push({s, m, label:'📌 '+t.slice(0,30), key:'wld', custom:true});
-    state.capture.push({text:t, date:dateStr()});
+  const ev = parseEventText(t);
+  if(!ev.time){
+    capStatus('Couldn’t read a time in that — add one, e.g. “Thursday 5pm” or “17:00”.');
+    return;
   }
-  document.getElementById('addSheet').style.display='none';
-  save(); renderCapture(); renderBlocks(); renderCommitments();
+  const title = t.replace(/\s+/g,' ').slice(0,30);
+  blocksFor(ev.date).push({s: ev.time, m: ev.mins||60, label:'📌 '+title, key:'wld', custom:true});
+  box.value='';
+  capStatus('✓ On the calendar: '+ev.date+' '+ev.time+(ev.note?' · '+ev.note:''));
+  save(); renderBlocks(); renderCommitments();
   if(ghToken() && navigator.onLine) syncNow();
 }
 // --- OCR pipeline (tesseract.js, lazy-loaded, fully on-device) ---
@@ -1600,24 +1535,6 @@ function approveProps(){
   save(); renderBlocks(); renderCommitments();
   if(ghToken() && navigator.onLine) syncNow();
 }
-function renderCapture(){
-  const el = document.getElementById('capList');
-  if(!el) return;
-  state.capture = state.capture || [];
-  el.innerHTML = state.capture.length ? state.capture.map((c,i)=>
-    `<div class="rule" style="display:flex; gap:8px; align-items:center"><span style="color:var(--muted); font-size:11px; white-space:nowrap">${c.date.slice(5)}</span><span style="flex:1">${c.text}</span><span style="cursor:pointer; color:var(--muted)" onclick="delCapture(${i})">✕</span></div>`).join('')
-    : '<p class="hint">Empty head, full list — that\'s the goal.</p>';
-}
-function viewCapImg(i){
-  const c = state.capture[i];
-  if(!c || !c.img) return;
-  const box = document.getElementById('reflectBox');
-  document.getElementById('reflectTime').textContent = c.date+' — capture';
-  document.getElementById('reflectText').innerHTML = `<img src="${c.img}" style="max-width:100%; border-radius:10px">`;
-  document.getElementById('reflectSrc').textContent = c.text;
-  box.style.display='block';
-}
-function delCapture(i){ state.capture.splice(i,1); save(); renderCapture(); renderCommitments(); }
 
 // ---------- Today's static mirror: commitments + next up ----------
 function renderCommitments(){
@@ -1625,10 +1542,8 @@ function renderCommitments(){
   if(!el) return;
   const d = dateStr();
   const customs = ((state.blocks||{})[d]||[]).filter(b=>b.custom).slice().sort((a,b)=>toMin(a.s)-toMin(b.s));
-  const caps = (state.capture||[]).slice(-5).reverse();
   let html = '';
   if(customs.length) html += customs.map(b=>`<div class="rule"><b style="display:inline">${b.s}</b> <span style="display:inline">${b.label} (${b.m}m)</span></div>`).join('');
-  if(caps.length) html += `<div class="hint" style="margin-top:6px">Captured: ${caps.map(c=>(c.img?'📎 ':'')+c.text).join(' · ')}</div>`;
   el.innerHTML = html || 'Nothing booked yet today.';
   // next-up strip
   const strip = document.getElementById('nextUp');
@@ -1643,21 +1558,6 @@ function renderCommitments(){
   }
 }
 
-// ---------- daily debrief ----------
-function saveDebrief(){
-  const use = document.getElementById('fbUse').value.trim();
-  const qol = document.getElementById('fbQol').value.trim();
-  if(!use && !qol) return;
-  state.feedback = state.feedback || {};
-  state.feedback[dateStr()] = {use, qol, at: new Date().toISOString()};
-  document.getElementById('fbNote').textContent = 'Saved & syncing — this feeds tomorrow\'s iteration.';
-  save();
-  if(ghToken() && navigator.onLine) syncNow();
-}
-function loadDebrief(){
-  const f = (state.feedback||{})[dateStr()];
-  if(f){ document.getElementById('fbUse').value = f.use||''; document.getElementById('fbQol').value = f.qol||''; }
-}
 
 // ---------- prayer time anchors (approximate, offline) ----------
 const TZ_COORDS = {
@@ -1873,40 +1773,9 @@ function renderBlocks(){
     : 'No future commitments booked.';
   const qd = document.getElementById('qcDate');
   if(qd && !qd.value) qd.value = d;
-  // cushion math
   const freeMin = free.reduce((a,p)=>a+(p.e-p.s),0);
-  state.tasks = state.tasks || [];
-  const needMin = state.tasks.filter(t=>!t.done).reduce((a,t)=>a+t.mins,0);
-  const fH = Math.floor(freeMin/60), fM = freeMin%60;
-  document.getElementById('freeTime').textContent = fH+'h '+String(fM).padStart(2,'0');
-  document.getElementById('needTime').textContent = Math.floor(needMin/60)+'h '+String(needMin%60).padStart(2,'0');
-  const cush = freeMin - needMin;
-  const cEl = document.getElementById('cushion'), cN = document.getElementById('cushionNote');
-  if(needMin===0){ cEl.textContent='—'; cN.textContent='add tasks with estimates'; }
-  else if(cush >= needMin*0.25){ cEl.textContent='✓ '+Math.floor(cush/60)+'h '+(cush%60)+'m spare'; cEl.style.color='var(--goodtext)'; cN.textContent='comfortable — start anyway'; }
-  else if(cush >= 0){ cEl.textContent='⚠ '+cush+' min spare'; cEl.style.color='var(--fnd)'; cN.textContent='tight — start the biggest task NOW'; }
-  else { cEl.textContent='✗ '+Math.abs(cush)+' min short'; cEl.style.color='var(--esp)'; cN.textContent='not enough day left — cut scope or move a task to tomorrow'; }
-  renderTasks();
+  document.getElementById('freeTime').textContent = Math.floor(freeMin/60)+'h '+String(freeMin%60).padStart(2,'0');
 }
-function renderTasks(){
-  const el = document.getElementById('taskList');
-  if(!el) return;
-  state.tasks = state.tasks || [];
-  el.innerHTML = state.tasks.length ? state.tasks.map((t,i)=>
-    `<label class="check${t.done?' done':''}"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${i})"><div><div class="t">${t.name}</div></div><div class="pts">${t.mins}m <span onclick="event.preventDefault(); delTask(${i})" style="cursor:pointer; color:var(--muted)">✕</span></div></label>`).join('')
-    : '<p class="hint">No tasks yet.</p>';
-}
-function addTask(){
-  const name = document.getElementById('taskName').value.trim();
-  const mins = parseInt(document.getElementById('taskMins').value,10);
-  if(!name || !mins) return;
-  state.tasks = state.tasks || [];
-  state.tasks.push({name, mins, done:false});
-  document.getElementById('taskName').value=''; document.getElementById('taskMins').value='';
-  save(); renderBlocks();
-}
-function toggleTask(i){ state.tasks[i].done = !state.tasks[i].done; save(); renderBlocks(); }
-function delTask(i){ state.tasks.splice(i,1); save(); renderBlocks(); }
 function attachDrag(el){
   let startY=0, origTop=0, origH=0, moved=false, dragging=false, mode='move';
   el.addEventListener('pointerdown', e=>{
@@ -2148,14 +2017,8 @@ dailyQuote();
 renderTrips();
 updateSplit('today');
 renderBlocks();
-renderCapture();
 renderCommitments();
-loadDebrief();
 refresh();
-// deep link: xenien.github.io/engine/#debrief jumps straight to the daily debrief form
-if(location.hash === '#debrief'){
-  setTimeout(()=>{ document.getElementById('debrief').scrollIntoView({behavior:'smooth'}); }, 300);
-}
 // offline support
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 // pull cloud backup on open (non-blocking)
