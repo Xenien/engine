@@ -1755,6 +1755,7 @@ function renderBlocks(){
   html += salahMarkers(new Date(d+'T12:00:00'));
   cal.innerHTML = html;
   cal.querySelectorAll('.calblk').forEach(el=>attachDrag(el));
+  attachCreateDrag(cal);
   // center the viewport on NOW when the tab is opened (not on background re-renders)
   const wrap = document.getElementById('calWrap');
   if(wrap && calAutoScroll && isTodayView && nowM >= CAL_START && nowM <= CAL_END){
@@ -1775,6 +1776,54 @@ function renderBlocks(){
   if(qd && !qd.value) qd.value = d;
   const freeMin = free.reduce((a,p)=>a+(p.e-p.s),0);
   document.getElementById('freeTime').textContent = Math.floor(freeMin/60)+'h '+String(freeMin%60).padStart(2,'0');
+}
+// desktop: click-drag on empty calendar space to paint a new block, then name it in the editor
+function attachCreateDrag(cal){
+  if(cal.__createDrag) return; cal.__createDrag = true;
+  if(!matchMedia('(pointer: fine)').matches) return;      // mouse/trackpad only — touch keeps scroll
+  let startMin = null, ghost = null;
+  const yToMin = e => {
+    const r = cal.getBoundingClientRect();
+    return Math.max(CAL_START, Math.min(CAL_END, CAL_START + (e.clientY - r.top)/K));
+  };
+  cal.addEventListener('pointerdown', e=>{
+    if(e.button !== 0 || e.target.closest('.calblk')) return;
+    startMin = yToMin(e); ghost = null;
+  });
+  cal.addEventListener('pointermove', e=>{
+    if(startMin === null) return;
+    const cur = yToMin(e);
+    if(!ghost){
+      if(Math.abs(cur - startMin)*K < 6) return;          // jitter ≠ intent
+      ghost = document.createElement('div');
+      ghost.className = 'calblk';
+      ghost.style.cssText = 'border:1.5px dashed var(--pdi); background:transparent; opacity:.85; pointer-events:none; z-index:5; color:var(--ink2)';
+      cal.appendChild(ghost);
+      try{ cal.setPointerCapture(e.pointerId); }catch(err){}
+    }
+    const a = Math.min(startMin, cur), b = Math.max(startMin, cur);
+    ghost.style.top = (a-CAL_START)*K + 'px';
+    ghost.style.height = Math.max(10, (b-a)*K) + 'px';
+    ghost.textContent = toHHMM(Math.round(a/15)*15) + ' – ' + toHHMM(Math.min(CAL_END, Math.round(b/15)*15));
+  });
+  const finishCreate = e=>{
+    if(startMin === null) return;
+    if(ghost){
+      const cur = yToMin(e);
+      let a = Math.round(Math.min(startMin, cur)/15)*15;
+      let b = Math.round(Math.max(startMin, cur)/15)*15;
+      if(b - a < 15) b = a + 15;
+      if(b > CAL_END){ b = CAL_END; a = Math.min(a, b-15); }
+      ghost.remove(); ghost = null;
+      blocksFor(calDate).push({s: toHHMM(a), m: b-a, label:'📌 New block', key:'wld', custom:true});
+      save(); renderBlocks(); renderCommitments();
+      openBlkEdit(blocksFor(calDate).length - 1);          // name it right away
+      if(ghToken() && navigator.onLine) syncNow();
+    }
+    startMin = null;
+  };
+  cal.addEventListener('pointerup', finishCreate);
+  cal.addEventListener('pointercancel', ()=>{ if(ghost){ ghost.remove(); } startMin = null; ghost = null; });
 }
 function attachDrag(el){
   let startY=0, origTop=0, origH=0, moved=false, dragging=false, mode='move';
