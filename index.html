@@ -244,14 +244,15 @@
       </div>
       <div class="tile"><div class="label">MVD status</div><div class="value" id="mvdStatus">0/3</div><div class="delta">the floor — never below this</div></div>
       <div class="tile"><div class="label">Streak (MVD days)</div><div class="value" id="streakVal">0</div><div class="delta" id="streakNote">log days to build it</div></div>
-      <div class="tile"><div class="label">Spanish in One Month</div><div class="value" id="challengeDays">—</div><div class="delta">days left · started Jul 6, ends Aug 4 · cohort is the witness</div></div>
+      <div class="tile"><div class="label" id="fndTileLabel">Foundations · Month 2</div><div class="value" id="fndDaysLeft">—</div><div class="delta" id="fndTileNote">days left in the month · Productivity</div></div>
       <div class="tile"><div class="label" id="tripLabel">Next trip</div><div class="value" id="tripDays">—</div><div class="delta" id="tripNote">add your trip in the Data tab</div></div>
     </div>
 
-    <div class="card">
-      <h2>Spanish in One Month — 30-day grid (Jul 6 → Aug 4)</h2>
-      <p class="hint">One cell per challenge day. Green fills automatically when you log a day with Spanish done; tap a cell to fix past days. Watching this fill IS the instant result.</p>
-      <div id="challengeGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(34px,1fr)); gap:5px; margin-top:10px"></div>
+    <div class="card" style="border-color:var(--fnd)">
+      <h2 id="nowFndTitle">NOW — Month 2: Productivity (Aug 2026)</h2>
+      <p class="hint">Keystone habit: <b id="nowFndHabit">Full-capture system — nothing lives in your head</b></p>
+      <p class="hint" style="margin-top:6px">The tick for today = at some point you opened your system and decided what to work on. Capture is already your strength — the build this month is the <b>review layer</b>: daily at 21:45, weekly Sunday 20:00.</p>
+      <p class="hint" style="margin-top:6px">Still running daily underneath: <b>Fitness</b> — 30 minutes, or any number of minutes, never zero. <b>Spanish</b> — maintenance, any contact counts.</p>
     </div>
 
     <div class="card">
@@ -264,6 +265,13 @@
       <h2>Full-day sessions</h2>
       <p class="hint">Each logged session scores. Social bonus stacks: any session done with, taught to, or reported to another human is worth more — that's your fuel, use it.</p>
       <div id="sessionList"></div>
+    </div>
+
+    <div class="card">
+      <h2>Spanish in One Month — ✅ complete (Jul 6 → Aug 4)</h2>
+      <p class="hint">Done. 20 lesson days, four coaching sessions with Ximena, full speaking audit written. The grid below is the record — it stays as the trophy, not the task.</p>
+      <p class="hint" style="margin-top:6px">Spanish is now a <b>maintenance habit</b>: top-200 words, Colombian/Mexican-leaning neutral Spanish. Any contact counts — one minute is a tick.</p>
+      <div id="challengeGrid" style="display:grid; grid-template-columns:repeat(auto-fill,minmax(34px,1fr)); gap:5px; margin-top:10px"></div>
     </div>
 
     <div class="card">
@@ -348,7 +356,7 @@
     <div class="card">
       <h2>Weekly targets</h2>
       <div id="wkBars"></div>
-      <p class="hint" style="margin-top:8px">Bars fill from logged days. Targets: 10 PDI deep-work blocks, 6 Spanish sessions (incl. 2 live speaking), 5 Foundations blocks, 3 wildcard sessions.</p>
+      <p class="hint" style="margin-top:8px">Bars fill from logged days. Targets: 10 PDI deep-work blocks, 8 Foundations blocks (focus month), 3 Spanish maintenance sessions, 3 wildcard sessions.</p>
     </div>
 
     <div class="card">
@@ -418,14 +426,14 @@
   <section class="tab" id="tab-foundations">
     <div class="card">
       <h2>Foundations — one foundation per month, 12 months</h2>
-      <p class="hint">Scott Young's sequence. Each month has one keystone habit; the weekly project block goes deeper. You started July 2026.</p>
+      <p class="hint">Scott Young's sequence. Each month has one keystone habit; the weekly project block goes deeper. You started July 2026 — Month 1 (Fitness) is complete and now runs as maintenance.</p>
       <div class="fgrid" id="fGrid" style="margin-top:12px"></div>
     </div>
     <div class="card">
       <h2>How to run a Foundations month (your cohort's real mechanics)</h2>
       <div class="rule"><b>The worksheet first — it's the whole game.</b><span>Scott's own words: "Completing the worksheets is the most valuable thing you can do in taking the course." Each module opens days before the 1st with a guided worksheet that sets up the month's keystone habit. Do it in the Saturday block, before the lessons.</span></div>
-      <div class="rule"><b>Lesson emails land ~15:15 your time on lesson days.</b><span>Weekly lessons delivered across the month (July so far: the 1st, 3rd, 5th, 7th). Watch same evening in the Foundations block, hit "Mark Complete" on the platform, drop one comment — the comment is your public witness on the course itself.</span></div>
-      <div class="rule"><b>The keystone habit is daily, the lesson is not.</b><span>M1 = 30 minutes of exercise every day. The MVD's 15-minute Foundations floor covers habit reps on non-lesson days.</span></div>
+      <div class="rule"><b>Lesson emails land ~15:15 your time on lesson days.</b><span>Three weekly lessons delivered across four weeks. Watch same evening in the Foundations block, hit "Mark Complete" on the platform, drop one comment — the comment is your public witness on the course itself.</span></div>
+      <div class="rule"><b>The keystone habit is daily, the lesson is not.</b><span>M2 = a full-capture system with a daily review — the tick is opening your system and deciding what to work on. M1's 30 minutes of exercise keeps running underneath as maintenance. The MVD's 15-minute Foundations floor covers habit reps on non-lesson days.</span></div>
       <div class="rule"><b>Community calls are 11:00 AM Pacific = 2:00 AM for you.</b><span>Watch the recordings (posted after each call) in a lesson slot instead. Do not trade sleep for a Zoom call — comment on the recording page to stay visible to the cohort.</span></div>
       <div class="rule"><b>$493.35 is already on the table.</b><span>Paid June 26, one-time, Standard Edition. The board meeting checks this investment's dividend every month for twelve months.</span></div>
       <div class="rule"><b>The habit continues after the month ends.</b><span>Month N+1 stacks on month N. By June 2027 you're running twelve keystone habits, each installed one at a time.</span></div>
@@ -549,15 +557,15 @@
 <script>
 // ---------- config ----------
 const MVD = [
-  {id:'mvd_esp', t:'Spanish — 10 minutes', d:'One Anki session or one podcast chunk. Out loud if humanly possible.', pts:10},
-  {id:'mvd_fnd', t:'Foundations — 15 minutes', d:"One lesson unit or the month's habit action.", pts:10},
+  {id:'mvd_esp', t:'Spanish — 10 minutes', d:'Maintenance: top-200 drilling, an LCS review, or real conversation. Out loud if humanly possible.', pts:10},
+  {id:'mvd_fnd', t:'Foundations — 15 minutes', d:"M2: open your system and decide what to work on. That decision IS the habit.", pts:10},
   {id:'mvd_log', t:'Score the day', d:'Check boxes, hit Log. 2 minutes. The day is not over until this is done.', pts:10},
 ];
 const SESSIONS = [
   {id:'pdi1', t:'PDI Deep Block 1', d:'90 min, hardest task first · in-window bonus before 18:00 Dubai', pts:40, key:'pdi'},
   {id:'pdi2', t:'PDI Deep Block 2', d:'90 min · in-window bonus before 18:00 Dubai', pts:40, key:'pdi'},
-  {id:'esp1', t:'Spanish full session', d:'30+ min sprint or live speaking · morning-slot bonus before 09:30', pts:15, key:'esp'},
-  {id:'fnd1', t:'Foundations block', d:'75 min lesson + habit rep · evening-slot bonus 19:00–21:45', pts:20, key:'fnd'},
+  {id:'esp1', t:'Spanish full session', d:'30+ min drilling or live speaking with Ximena · morning-slot bonus before 09:30', pts:15, key:'esp'},
+  {id:'fnd1', t:'Foundations block', d:"75 min — weekly review, capture sweep, or the month's lesson · evening-slot bonus 19:00–21:45", pts:20, key:'fnd'},
   {id:'wld1', t:'Wildcard session', d:'Your current new thing — sanctioned novelty', pts:10, key:'wld'},
   {id:'soc1', t:'Social context', d:'Real time with humans today — a meal, the group, friends for hours. Once per day.', pts:10, key:'soc'},
 ];
@@ -612,8 +620,8 @@ const FOUNDATIONS = [
 ];
 const WK_TARGETS = [
   {key:'pdi', name:'PDI blocks', target:10, color:'var(--pdi)', track:'var(--pdi-track)'},
-  {key:'esp', name:'Spanish', target:6, color:'var(--esp)', track:'var(--esp-track)'},
-  {key:'fnd', name:'Foundations', target:5, color:'var(--fnd)', track:'var(--fnd-track)'},
+  {key:'esp', name:'Spanish', target:3, color:'var(--esp)', track:'var(--esp-track)'},
+  {key:'fnd', name:'Foundations', target:8, color:'var(--fnd)', track:'var(--fnd-track)'},
   {key:'wld', name:'Wildcard', target:3, color:'var(--wld)', track:'var(--wld-track)'},
 ];
 
@@ -1663,7 +1671,8 @@ function renderPillars(){
 // ---------- Blocks: Shovel-style timeboxing ----------
 const DAY_TEMPLATE = {
   weekday: [
-    {s:'06:50', m:30,  label:'Spanish sprint', key:'esp'},
+    {s:'06:50', m:20,  label:'Spanish maintenance', key:'esp'},
+    {s:'07:10', m:15,  label:'Daily review — plan the day', key:'fnd'},
     {s:'09:00', m:90,  label:'PDI Deep Block 1', key:'pdi'},
     {s:'12:30', m:30,  label:'Passive immersion (lunch)', key:'esp'},
     {s:'14:00', m:90,  label:'PDI Deep Block 2', key:'pdi'},
@@ -1672,13 +1681,15 @@ const DAY_TEMPLATE = {
     {s:'21:45', m:15,  label:'Score the day', key:'pdi'},
   ],
   sat: [
-    {s:'06:50', m:30,  label:'Spanish sprint', key:'esp'},
+    {s:'06:50', m:20,  label:'Spanish maintenance', key:'esp'},
+    {s:'07:10', m:15,  label:'Daily review — plan the day', key:'fnd'},
     {s:'10:00', m:120, label:'Foundations project block', key:'fnd'},
     {s:'15:00', m:60,  label:'Live speaking #1', key:'esp'},
     {s:'21:45', m:15,  label:'Score the day', key:'pdi'},
   ],
   sun: [
-    {s:'06:50', m:30,  label:'Spanish sprint', key:'esp'},
+    {s:'06:50', m:20,  label:'Spanish maintenance', key:'esp'},
+    {s:'07:10', m:15,  label:'Daily review — plan the day', key:'fnd'},
     {s:'10:00', m:120, label:'Wildcard long block', key:'wld'},
     {s:'15:00', m:60,  label:'Live speaking #2', key:'esp'},
     {s:'20:00', m:30,  label:'WEEKLY REVIEW', key:'pdi'},
@@ -2048,12 +2059,25 @@ function renderChallenge(){
   }
 }
 
-// Spanish in One Month challenge countdown (July 2026)
+// Foundations month countdown — self-updating, reads the current month off FOUNDATIONS
 (function(){
-  const end = new Date('2026-08-04T23:59:59');
-  const left = Math.max(0, Math.ceil((end - new Date())/86400000));
-  const el = document.getElementById('challengeDays');
+  const now = new Date();
+  const curKey = now.toLocaleString('en',{month:'short'})+' '+now.getFullYear();
+  const idx = FOUNDATIONS.findIndex(f=>f[0]===curKey);
+  const endOfMonth = new Date(now.getFullYear(), now.getMonth()+1, 0, 23, 59, 59);
+  const left = Math.max(0, Math.ceil((endOfMonth - now)/86400000));
+  const el = document.getElementById('fndDaysLeft');
   if(el) el.textContent = left;
+  if(idx < 0) return;
+  const f = FOUNDATIONS[idx];
+  const lab  = document.getElementById('fndTileLabel');
+  const note = document.getElementById('fndTileNote');
+  const ttl  = document.getElementById('nowFndTitle');
+  const hab  = document.getElementById('nowFndHabit');
+  if(lab)  lab.textContent  = 'Foundations · Month '+(idx+1);
+  if(note) note.textContent = 'days left in the month · '+f[1];
+  if(ttl)  ttl.textContent  = 'NOW — Month '+(idx+1)+': '+f[1]+' ('+f[0]+')';
+  if(hab)  hab.textContent  = f[2];
 })();
 load();
 viewDate = dateStr();
